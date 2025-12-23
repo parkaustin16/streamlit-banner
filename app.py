@@ -46,7 +46,7 @@ CLOUDINARY_API_SECRET = get_config('CLOUDINARY_API_SECRET')
 # Airtable Configuration
 AIRTABLE_API_KEY = get_config('AIRTABLE_API_KEY')
 AIRTABLE_BASE_ID = get_config('AIRTABLE_BASE_ID')
-AIRTABLE_TABLE_NAME = get_config('AIRTABLE_TABLE_NAME', 'Banner Captures')
+AIRTABLE_TABLE_NAME = get_config('AIRTABLE_TABLE_NAME')
 
 # Configure Cloudinary only if credentials are available
 if all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
@@ -151,8 +151,6 @@ def save_to_airtable(country_code, mode, slide_num, image_url, cloudinary_id, ca
                 "Cloudinary ID": cloudinary_id,
                 "Capture Date": capture_date,
                 "Timestamp": datetime.now().isoformat(),
-                # Optional: Add as attachment field for thumbnail preview in Airtable
-                "Image": [{"url": image_url}] if image_url else None
             }
 
             created_record = table.create(record)
@@ -235,30 +233,6 @@ def find_hero_carousel(page, log_callback=None):
 
     log("🔍 Detecting hero carousel...")
 
-    # Strategy 0: FIRST - Explicitly exclude notification banners by position
-    # Notification banners are typically at the very top (y < 100px) and short
-    try:
-        notification_carousels = page.query_selector_all(".cmp-carousel")
-        for carousel in notification_carousels:
-            bbox = carousel.bounding_box()
-            if bbox and bbox['y'] < 100 and bbox['height'] < 150:
-                # Try to hide notification banners
-                page.evaluate("""
-                    (selector) => {
-                        const elements = document.querySelectorAll(selector);
-                        elements.forEach(el => {
-                            const box = el.getBoundingClientRect();
-                            if (box.y < 100 && box.height < 150) {
-                                el.style.display = 'none';
-                            }
-                        });
-                    }
-                """, ".cmp-carousel")
-                log("🚫 Hiding top notification banners...")
-                break
-    except:
-        pass
-
     # Strategy 1: Look for carousel in common hero/main sections
     hero_selectors = [
         # Most specific: Look for carousel in main content area, first one
@@ -330,19 +304,11 @@ def find_hero_carousel(page, log_callback=None):
                     notification_keywords = [
                         'cookie', 'クッキー', 'プライバシー', 'privacy', 'notice',
                         'お知らせ', '利用規約', '特定商取引', 'オンラインショップ',
-                        'terms', 'conditions', '規約', '改正', 'ご利用規約',
-                        '特定商取引法', '表示の改正', '詳しくはこちら', '更新',
-                        'updated', 'legal', 'policy', 'agreement'
+                        'terms', 'conditions', '規約', '改正'
                     ]
                     if any(keyword in carousel_text for keyword in notification_keywords):
                         log(f"   Carousel {idx}: SKIPPED (notification/legal content detected)")
                         continue
-
-                    # Additional filter: Skip very short text content (notifications are brief)
-                    if len(carousel_text.strip()) < 50:  # Notifications usually have little text
-                        log(f"   Carousel {idx}: SKIPPED (text too short: {len(carousel_text)} chars)")
-                        continue
-
                 except:
                     pass
 
@@ -602,6 +568,63 @@ def main():
     with st.sidebar:
         st.header("Settings")
 
+        # Add Airtable Debug Test Button
+        if st.button("🔍 Test Airtable Connection"):
+            try:
+                import requests
+
+                st.write("**Testing GET (Read):**")
+                url = f"https://api.airtable.com/v0/{AIRTABLE_BASE_ID}/{AIRTABLE_TABLE_NAME}"
+                headers = {
+                    "Authorization": f"Bearer {AIRTABLE_API_KEY}",
+                }
+                response = requests.get(url, headers=headers, verify=False)
+
+                st.write(f"- Status Code: {response.status_code}")
+                st.write(f"- Base ID: `{AIRTABLE_BASE_ID}`")
+                st.write(f"- Table Name: `{AIRTABLE_TABLE_NAME}`")
+                st.write(f"- Token starts with: `{AIRTABLE_API_KEY[:7]}...`")
+
+                if response.status_code == 200:
+                    st.success("✅ READ access works!")
+                else:
+                    st.error(f"❌ READ failed: {response.text}")
+
+                st.divider()
+                st.write("**Testing POST (Write):**")
+
+                # Test creating a record
+                test_data = {
+                    "fields": {
+                        "Country": "TEST",
+                        "Mode": "Test",
+                        "Slide Number": 1,
+                        "Image URL": "https://example.com/test.png",
+                        "Cloudinary ID": "test_id",
+                        "Capture Date": datetime.now().strftime('%Y-%m-%d'),
+                        "Date": datetime.now().strftime('%Y-%m-%d'),
+                        "Timestamp": datetime.now().isoformat()
+                    }
+                }
+
+                write_response = requests.post(url, json=test_data, headers=headers, verify=False)
+
+                st.write(f"- Status Code: {write_response.status_code}")
+
+                if write_response.status_code in [200, 201]:
+                    st.success("✅ WRITE access works!")
+                    st.write("Test record created successfully!")
+                    st.json(write_response.json())
+                else:
+                    st.error(f"❌ WRITE failed: {write_response.text}")
+                    st.write("**Full response:**")
+                    st.code(write_response.text)
+
+            except Exception as e:
+                st.error(f"❌ Test failed: {str(e)}")
+
+        st.divider()
+
         countries = [
             ("au", "Australia (AU)"),
             ("uk", "United Kingdom (UK)"),
@@ -649,7 +672,7 @@ def main():
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
-        st.subheader("☁️ Cloud Upload")
+        st.subheader("☁️ Airtable Upload")
 
         # Check if credentials are configured
         cloudinary_ready = all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET])
