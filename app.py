@@ -211,6 +211,7 @@ def save_to_airtable(country_code, mode, slide_num, image_url, cloudinary_id, ca
 def apply_clean_styles(page_obj):
     """Comprehensive CSS cleanup."""
     page_obj.evaluate("""
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
             [class*="chat"], [id*="chat"], [class*="proactive"], 
@@ -249,64 +250,74 @@ def find_hero_carousel(page, log_callback=None):
 
     log("🔍 Detecting hero carousel...")
 
+    # ADDED: Centralized list of wrappers to exclude
+    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser"
+
     # Strategy 1: Look for carousel in common hero/main sections
     hero_selectors = [
-        # Most specific: Look for carousel in main content area, first one
-        "main .cmp-carousel:first-of-type",
-        ".main-content .cmp-carousel:first-of-type",
-
-        # Hero-specific containers
+        "main .cmp-carousel",
+        ".main-content .cmp-carousel",
         ".hero-section .cmp-carousel",
         ".c-hero-section .cmp-carousel",
-        "[class*='hero'] .cmp-carousel:first-of-type",
-
-        # First carousel in content area (not header/footer)
-        ".content .cmp-carousel:first-of-type",
-        "section .cmp-carousel:first-of-type",
+        "[class*='hero'] .cmp-carousel",
+        ".content .cmp-carousel",
+        "section .cmp-carousel",
     ]
 
     hero_carousel = None
     for selector in hero_selectors:
         try:
-            element = page.query_selector(selector)
-            if element:
-                # Verify it has indicators (confirming it's a carousel)
+            # ADDED: Changed to query_selector_all to allow skipping excluded carousels
+            elements = page.query_selector_all(selector)
+            for element in elements:
+                # ADDED: Check if this specific element is inside an excluded wrapper
+                is_in_excluded = element.evaluate(f"el => !!el.closest('{excluded_wrappers}')")
+                if is_in_excluded:
+                    continue
+
+                # Original validation logic
                 indicators = element.query_selector_all(".cmp-carousel__indicator")
                 if len(indicators) > 0:
-                    # Additional validation: check if it's tall enough to be a hero banner
                     bbox = element.bounding_box()
                     if bbox and bbox['height'] >= 200:
                         log(f"✅ Found hero carousel using: {selector}")
                         hero_carousel = element
                         break
-        except Exception as e:
+            if hero_carousel:
+                break
+        except Exception:
             continue
 
     if not hero_carousel:
         log("⚠️ Could not find hero carousel with specific selectors, using advanced scoring...")
-        # Advanced fallback: Score all carousels and pick the best one
         try:
             all_carousels = page.query_selector_all(".cmp-carousel")
             candidates = []
-            viewport_width = page.viewport_size['width']
+            viewport_size = page.viewport_size
+            viewport_width = viewport_size['width'] if viewport_size else 1280
 
             for idx, carousel in enumerate(all_carousels):
+                # ADDED: Explicitly skip carousels inside excluded notification/cookie wrappers
+                is_in_excluded = carousel.evaluate(f"el => !!el.closest('{excluded_wrappers}')")
+                if is_in_excluded:
+                    log(f"   Carousel {idx}: SKIPPED (inside {excluded_wrappers})")
+                    continue
+
                 indicators = carousel.query_selector_all(".cmp-carousel__indicator")
                 if len(indicators) == 0:
                     continue
 
-                # Get position and size
                 bbox = carousel.bounding_box()
                 if not bbox:
                     continue
 
-                # FILTER 1: Skip notification/alert banners (typically very short height)
-                if bbox['height'] < 200:  # Hero banners are at least 200px tall
-                    log(f"   Carousel {idx}: SKIPPED (too short: {bbox['height']:.0f}px - likely notification banner)")
+                # FILTER 1: Skip notification/alert banners
+                if bbox['height'] < 200:
+                    log(f"   Carousel {idx}: SKIPPED (too short: {bbox['height']:.0f}px)")
                     continue
 
-                # FILTER 2: Skip carousels that are too narrow (not full-width)
-                if bbox['width'] < viewport_width * 0.5:  # Must be at least 50% of viewport width
+                # FILTER 2: Skip narrow carousels
+                if bbox['width'] < viewport_width * 0.5:
                     log(f"   Carousel {idx}: SKIPPED (too narrow: {bbox['width']:.0f}px)")
                     continue
 
@@ -314,7 +325,7 @@ def find_hero_carousel(page, log_callback=None):
                 has_hero_banner = carousel.query_selector(".c-hero-banner") is not None
                 has_hero_image = carousel.query_selector(".c-image__item, .cmp-image") is not None
 
-                # FILTER 3: Skip if it looks like a notification/alert (check text content)
+                # FILTER 3: Skip if it looks like legal/notification content (Original List Preserved)
                 try:
                     carousel_text = carousel.inner_text().lower()
                     notification_keywords = [
@@ -328,23 +339,17 @@ def find_hero_carousel(page, log_callback=None):
                 except:
                     pass
 
-                # Calculate score for this carousel
+                # Scoring logic (Original Scores Preserved)
                 score = 0
-
-                # Prefer carousels with .c-hero-banner class inside
                 if has_hero_banner:
                     score += 100
-
-                # Prefer carousels with image content
                 if has_hero_image:
                     score += 50
 
-                # Prefer larger carousels (hero banners are typically large)
                 area = bbox['width'] * bbox['height']
-                if area > 500000:  # Large area
+                if area > 500000:
                     score += 30
 
-                # Strongly prefer carousels with good height (hero banners are tall)
                 if bbox['height'] > 400:
                     score += 50
                 elif bbox['height'] > 300:
@@ -352,15 +357,15 @@ def find_hero_carousel(page, log_callback=None):
                 elif bbox['height'] > 200:
                     score += 10
 
-                # Prefer carousels near top of page (but not the very top)
-                if 100 < bbox['y'] < 600:  # Skip header/notification area, prefer upper content
+                # Position Scoring
+                if 100 < bbox['y'] < 600:
                     score += 25
-                elif 50 < bbox['y'] < 100:  # Slightly penalize very top
+                elif 50 < bbox['y'] < 100:
                     score -= 20
-                elif bbox['y'] < 50:  # Strongly penalize items in header/notification area
+                elif bbox['y'] < 50:
                     score -= 100
 
-                # Prefer carousels that are full-width or near full-width
+                # Width Scoring
                 if bbox['width'] > viewport_width * 0.9:
                     score += 20
                 elif bbox['width'] > viewport_width * 0.8:
@@ -379,11 +384,9 @@ def find_hero_carousel(page, log_callback=None):
                 log(f"   Carousel {idx}: score={score}, pos={bbox['y']:.0f}px, height={bbox['height']:.0f}px, size={area:.0f}, hero={has_hero_banner}")
 
             if candidates:
-                # Sort by score (descending)
                 candidates.sort(key=lambda x: x['score'], reverse=True)
                 best = candidates[0]
 
-                # Only accept if score is positive (filters out poor matches)
                 if best['score'] > 0:
                     hero_carousel = best['carousel']
                     log(f"✅ Selected carousel {best['index']} (score: {best['score']})")
