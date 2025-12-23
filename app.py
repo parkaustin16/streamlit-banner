@@ -46,7 +46,7 @@ CLOUDINARY_API_SECRET = get_config('CLOUDINARY_API_SECRET')
 # Airtable Configuration
 AIRTABLE_API_KEY = get_config('AIRTABLE_API_KEY')
 AIRTABLE_BASE_ID = get_config('AIRTABLE_BASE_ID')
-AIRTABLE_TABLE_NAME = get_config('AIRTABLE_TABLE_NAME', 'Banner Captures')
+AIRTABLE_TABLE_NAME = get_config('AIRTABLE_TABLE_NAME', 'captures')
 
 # Configure Cloudinary only if credentials are available
 if all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET]):
