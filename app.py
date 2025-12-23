@@ -16,10 +16,13 @@ import os
 @st.cache_resource
 def install_playwright_browsers():
     try:
-        # This installs the necessary browser binaries
-        subprocess.run(["python", "-m", "playwright", "install", "chromium"], check=True)
+        # Use sys.executable to ensure we use the same python path as Streamlit
+        # Added --with-deps as a backup for the linux environment
+        subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
     except Exception as e:
         st.error(f"Error installing browsers: {e}")
+        # Optional: try to force install if the above fails
+        os.system(f"{sys.executable} -m playwright install chromium")
 
 # Call the function
 install_playwright_browsers()
