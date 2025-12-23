@@ -460,21 +460,62 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 log("❌ Could not identify hero carousel")
                 return
 
+            try:
+                pause_btn = hero_carousel.query_selector(".js-carousel-pause")
+                if pause_btn and pause_btn.is_visible():
+                    log("⏸️ Pausing carousel autoplay...")
+                    pause_btn.click(force=True)
+                    time.sleep(1)
+            except:
+                pass
+
             # Get indicators from ONLY the hero carousel
             indicators = hero_carousel.query_selector_all(".cmp-carousel__indicator")
             num_slides = len(indicators)
             log(f"📸 Found {num_slides} banners in HERO carousel.")
 
+            if num_slides > 0:
+                log("🔄 Resetting to first slide...")
+                indicators[0].click(force=True)
+                time.sleep(2)
+
             for i in range(num_slides):
                 log(f"📷 Processing slide {i + 1} of {num_slides}...")
 
-                # Re-query indicators within hero carousel to avoid stale elements
+                # Re-query indicators
                 indicators = hero_carousel.query_selector_all(".cmp-carousel__indicator")
                 if i >= len(indicators):
-                    log(f"⚠️ Slide {i + 1} no longer accessible, skipping...")
                     continue
 
+                # 1. DEFINE THE SELECTOR FIRST (Fixes the local variable error)
+                active_slide_selector = f".cmp-carousel__item.swiper-slide-active[data-swiper-slide-index='{i}']"
+
+                # 2. CLICK THE INDICATOR
                 indicators[i].click(force=True)
+
+                # 3. MINIMAL LOAD FIX: Force lazy-load to trigger by scrolling & waiting for pixels
+                try:
+                    # Remove the lazy attribute and scroll to trigger the download
+                    page.evaluate(f"""
+                                    () => {{
+                                        const slide = document.querySelector("{active_slide_selector}");
+                                        if (slide) {{
+                                            const img = slide.querySelector('img');
+                                            if (img) img.removeAttribute('loading');
+                                            slide.scrollIntoView();
+                                        }}
+                                    }}
+                                """)
+
+                    # Wait for the image to have actual physical pixels (naturalWidth)
+                    page.wait_for_function(f"""
+                                    () => {{
+                                        const img = document.querySelector("{active_slide_selector} img");
+                                        return !img || (img.complete && img.naturalWidth > 0);
+                                    }}
+                                """, timeout=10000)
+                except:
+                    pass  # Don't let a timeout break the app
 
                 # Apply styles immediately after click
                 apply_clean_styles(page)
