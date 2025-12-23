@@ -409,7 +409,16 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
     with sync_playwright() as p:
         log("🚀 Launching browser...")
-        browser = p.chromium.launch(headless=True)
+        # Add these specific flags for Cloud/Linux environments
+        browser = p.chromium.launch(
+            headless=True,
+            args=[
+                "--no-sandbox",  # Crucial for Linux containers
+                "--disable-setuid-sandbox",  # Crucial for Linux containers
+                "--disable-dev-shm-usage",  # Prevents crashes in low-memory environments
+                "--disable-gpu"  # Servers don't have GPUs
+            ]
+        )
         context = browser.new_context(viewport=size)
         page = context.new_page()
 
