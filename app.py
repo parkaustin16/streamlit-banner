@@ -279,7 +279,7 @@ def find_hero_carousel(page, log_callback=None):
                 indicators = element.query_selector_all(".cmp-carousel__indicator")
                 if len(indicators) > 0:
                     bbox = element.bounding_box()
-                    if bbox and bbox['height'] >= 200:
+                    if bbox and bbox['height'] >= 300:
                         log(f"✅ Found hero carousel using: {selector}")
                         hero_carousel = element
                         break
@@ -451,7 +451,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 pass
 
             # Wait for any carousel to load
-            page.wait_for_selector(".cmp-carousel", timeout=30000)
+            page.wait_for_selector("main .cmp-carousel, .main .cmp-carousel, #contents .cmp-carousel", timeout=30000)
 
             # Find the hero carousel specifically
             hero_carousel = find_hero_carousel(page, log_callback)
