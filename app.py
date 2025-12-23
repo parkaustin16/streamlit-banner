@@ -422,7 +422,8 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 "--disable-gpu"  # Servers don't have GPUs
             ]
         )
-        context = browser.new_context(viewport=size)
+        # ADDED device_scale_factor=2 for high-resolution font rendering
+        context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
 
         def block_chat_requests(route):
@@ -495,17 +496,24 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
                 # 3. MINIMAL LOAD FIX: Force lazy-load to trigger by scrolling & waiting for pixels
                 try:
-                    # Remove the lazy attribute and scroll to trigger the download
+                    # ADDED: Force high-quality font smoothing and wait for webfonts to load
                     page.evaluate(f"""
                                     () => {{
                                         const slide = document.querySelector("{active_slide_selector}");
                                         if (slide) {{
+                                            // Enable anti-aliasing for cleaner text
+                                            slide.style.webkitFontSmoothing = "antialiased";
+                                            slide.style.mozOsxFontSmoothing = "grayscale";
+
                                             const img = slide.querySelector('img');
                                             if (img) img.removeAttribute('loading');
                                             slide.scrollIntoView();
                                         }}
                                     }}
                                 """)
+
+                    # ADDED: Ensure browser has finished loading the font files
+                    page.evaluate("document.fonts.ready")
 
                     # Wait for the image to have actual physical pixels (naturalWidth)
                     page.wait_for_function(f"""
@@ -555,6 +563,9 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 except:
                     # Fallback to short sleep if wait fails
                     time.sleep(1.0)
+
+                # ADDED: Final pause to ensure brand font swap and opacity transitions are 100% complete
+                time.sleep(2.0)
 
                 filename = f"{country_code}_{mode}_hero_{i + 1}.png"
                 filepath = os.path.join(session_path, filename)
@@ -696,6 +707,8 @@ def main():
         countries = [
             ("au", "Australia (AU)"),
             ("uk", "United Kingdom (UK)"),
+            ("ca_en", "Canada (CA_EN)"),
+            ("ca_fr", "Canada (CA_FR)"),
             ("fr", "France (FR)"),
             ("de", "Germany (DE)"),
             ("it", "Italy (IT)"),

@@ -19,6 +19,7 @@ fonts-noto-color-emoji
 fonts-thai-tlwg
 fonts-kacst
 fonts-freefont-ttf
+fonts-liberation
 libgbm1
 libnss3
 libasound2
