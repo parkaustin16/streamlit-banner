@@ -12,7 +12,6 @@ from pyairtable import Api
 import subprocess
 import os
 
-
 # Check if chromium is installed, if not, install it
 @st.cache_resource
 def install_playwright_browsers():
@@ -24,7 +23,6 @@ def install_playwright_browsers():
         st.error(f"Error installing browsers: {e}")
         # Optional: try to force install if the above fails
         os.system(f"{sys.executable} -m playwright install chromium")
-
 
 # Call the function
 install_playwright_browsers()
@@ -215,34 +213,19 @@ def apply_clean_styles(page_obj):
     page_obj.evaluate("""
         const style = document.createElement('style');
         style.innerHTML = `
-            /* Existing exclusions */
-
             [class*="chat"], [id*="chat"], [class*="proactive"], 
-            .alk-container, #genesys-chat, .genesys-messenger,
-            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-            .open-button,
-            .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
-
-            /* New exclusions for the notification banner carousel and its specific items */
-            .c-notification-banner, 
-            [class*="notification-banner"],
-            .c-notification-banner__wrap,
-            .c-notification-banner__contents
+        .alk-container, #genesys-chat, .genesys-messenger,
+        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
             { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
         `;
         document.head.appendChild(style);
 
-        const hideSelectors = [
-            '.c-header', 
-            '.navigation', 
-            '.iw_viewport-wrapper > header', 
-            '.al-quick-btn__quickbtn', 
-            '.al-quick-btn__topbtn',
-            '.c-notification-banner'
-        ];
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
@@ -478,8 +461,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             indicators = hero_carousel.query_selector_all(".cmp-carousel__indicator")
             num_slides = len(indicators)
             log(f"📸 Found {num_slides} banners in HERO carousel.")
-
-            apply_clean_styles(page)
 
             for i in range(num_slides):
                 log(f"📷 Processing slide {i + 1} of {num_slides}...")
