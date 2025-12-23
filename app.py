@@ -17,15 +17,11 @@ import os
 @st.cache_resource
 def install_playwright_browsers():
     try:
-        # 1. Install comprehensive fonts for all global LG regions
-        os.system(
-            "apt-get update && apt-get install -y fonts-noto-cjk fonts-noto-color-emoji fonts-thai-tlwg fonts-kacst fonts-freefont-ttf")
-
-        # 2. Install Playwright and its system dependencies
+        # We no longer run apt-get here because packages.txt handles it
+        # Just install the Playwright chromium binary
         subprocess.run([sys.executable, "-m", "playwright", "install", "chromium"], check=True)
-        subprocess.run([sys.executable, "-m", "playwright", "install-deps"], check=True)
     except Exception as e:
-        st.error(f"Error installing browsers/fonts: {e}")
+        st.error(f"Error installing playwright: {e}")
 
 
 # Call the function
