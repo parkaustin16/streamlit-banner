@@ -214,10 +214,12 @@ def apply_clean_styles(page_obj):
         document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
+            /* ADDED: .c-membership-popup to target the registration overlay */
             [class*="chat"], [id*="chat"], [class*="proactive"], 
         .alk-container, #genesys-chat, .genesys-messenger,
         .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
         .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        .c-membership-popup, 
         [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
         .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
         .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
@@ -251,7 +253,7 @@ def find_hero_carousel(page, log_callback=None):
     log("🔍 Detecting hero carousel...")
 
     # ADDED: Centralized list of wrappers to exclude
-    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser"
+    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser, .c-membership-popup"
 
     # Strategy 1: Look for carousel in common hero/main sections
     hero_selectors = [
