@@ -705,7 +705,7 @@ def main():
             ("it", "Italy (IT)"),
             ("es", "Spain (ES)"),
             ("nl", "Netherlands (NL)"),
-            ("sw", "Sweden (SW)"),
+            ("se", "Sweden (SE)"),
             ("pt", "Portugal (PT)"),
             ("hu", "Hungary (HU)"),
             ("pl", "Poland (PL)"),
