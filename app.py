@@ -173,7 +173,7 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
                 "Name": record_name,
                 "Country": full_country_name,
                 "Date": capture_date,
-                "banner type": banner_type_label,
+                "Banner Type": banner_type_label,
                 "URLs": url_text
             }
 
