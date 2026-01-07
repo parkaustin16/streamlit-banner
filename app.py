@@ -488,7 +488,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
                 # ATTEMPT LOOP: Handles mobile snapping/duplicates
                 for attempt in range(4):  # Increased to 4 attempts for tricky sites
-                    log(f"   Selecting slide {slide_num} (Attempt {attempt + 1})...")
+                    log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
                     # 1. Force the swiper state & stop autoplay via JS
                     page.evaluate(f"""
@@ -609,7 +609,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 # --- STREAMLIT UI ---
 
 def main():
-    st.title("📸 LG Hero Banner Capture")
+    st.title("LG Hero Banner Capture")
 
     with st.expander("⚙️ Configuration Status", expanded=False):
         cloudinary_configured = all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET])
@@ -642,7 +642,7 @@ def main():
                             "Country": "TEST",
                             "Date": datetime.now().strftime('%m/%d/%Y'),
                             "Banner Type": "PC",
-                            "URLs": "CONNECTION_TEST"
+                            "URLs": "https://example.com/png"
                         }
                     }
                     write_response = requests.post(read_url, json=write_data, headers=headers, verify=False)
@@ -702,7 +702,7 @@ def main():
         individual_sorted = sorted(all_subs, key=lambda x: x[1])
         country_labels.extend([label for _, label in individual_sorted])
 
-        selected_option = st.selectbox("Country/Region", options=country_labels, index=0) # Default to All Subsidiaries
+        selected_option = st.selectbox("Subsidiary/Region", options=country_labels, index=0) # Default to All Subsidiaries
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
@@ -715,7 +715,7 @@ def main():
         run_btn = st.button("Start Capture", type="primary", use_container_width=True)
         
         # Stop Capture Button replaces "Run All Subsidiaries"
-        if st.button("🛑 Stop Capture", use_container_width=True):
+        if st.button("Stop Capture", use_container_width=True):
             st.session_state.stop_requested = True
             st.warning("Stop requested. Will exit after current country finishes.")
             
