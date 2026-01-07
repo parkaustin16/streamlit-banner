@@ -619,6 +619,9 @@ def main():
 
     if 'log_messages' not in st.session_state:
         st.session_state.log_messages = []
+        
+    if 'stop_requested' not in st.session_state:
+        st.session_state.stop_requested = False
 
     with st.sidebar:
         st.header("Settings")
@@ -658,31 +661,45 @@ def main():
 
         st.divider()
 
-        countries = [
-            ("au", "Australia (AU)"), ("uk", "United Kingdom (UK)"), ("ca_en", "Canada (CA_EN)"),
-            ("ca_fr", "Canada (CA_FR)"), ("ch_fr", "Switzerland (CH_FR)"), ("ch_de", "Switzerland (CH_DE)"),
-            ("fr", "France (FR)"), ("de", "Germany (DE)"), ("it", "Italy (IT)"),
-            ("es", "Spain (ES)"), ("nl", "Netherlands (NL)"),("cz", "Czech Republic (CZ)"),
-            ("se", "Sweden (SE)"), ("pt", "Portugal (PT)"), ("hu", "Hungary (HU)"),
-            ("pl", "Poland (PL)"), ("at", "Austria (AT)"), ("mx", "Mexico (MX)"),
-            ("br", "Brazil (BR)"), ("ar", "Argentina (AR)"), ("cl", "Chile (CL)"),
-            ("co", "Colombia (CO)"), ("pe", "Peru (PE)"), ("pa", "Panama (PA)"),
-            ("jp", "Japan (JP)"), ("hk_en", "Hong Kong (HK_EN)"), ("tw", "Taiwan (TW)"),
-            ("in", "India (IN)"), ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"),
-            ("th", "Thailand (TH)"), ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"),
-            ("id", "Indonesia (ID)"), ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"),
-            ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"), ("ma", "Morocco (MA)"),
-            ("sa_en", "Saudi Arabia (SA_EN)"), ("sa_ar", "Saudi Arabia (SA_AR)"), ("za", "South Africa (ZA)")        
-            
-        ]
+        # Regional Groups Definition
+        regions = {
+            "Asia": [
+                ("au", "Australia (AU)"), ("jp", "Japan (JP)"), ("hk_en", "Hong Kong (HK_EN)"), ("tw", "Taiwan (TW)"),
+                ("in", "India (IN)"), ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"),
+                ("th", "Thailand (TH)"), ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"),
+                ("id", "Indonesia (ID)")
+            ],
+            "Europe": [
+                ("uk", "United Kingdom (UK)"), ("ch_fr", "Switzerland (CH_FR)"), ("ch_de", "Switzerland (CH_DE)"),
+                ("fr", "France (FR)"), ("de", "Germany (DE)"), ("it", "Italy (IT)"),
+                ("es", "Spain (ES)"), ("nl", "Netherlands (NL)"), ("cz", "Czech Republic (CZ)"),
+                ("se", "Sweden (SE)"), ("pt", "Portugal (PT)"), ("hu", "Hungary (HU)"),
+                ("pl", "Poland (PL)"), ("at", "Austria (AT)")
+            ],
+            "LATAM": [
+                ("mx", "Mexico (MX)"), ("br", "Brazil (BR)"), ("ar", "Argentina (AR)"), ("cl", "Chile (CL)"),
+                ("co", "Colombia (CO)"), ("pe", "Peru (PE)"), ("pa", "Panama (PA)")
+            ],
+            "MEA": [
+                ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"), ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"),
+                ("ma", "Morocco (MA)"), ("sa_en", "Saudi Arabia (SA_EN)"), ("sa", "Saudi Arabia (SA)"), 
+                ("za", "South Africa (ZA)")
+            ]
+        }
+        
+        all_subs = []
+        for r_list in regions.values():
+            all_subs.extend(r_list)
 
-        country_labels = [label for _, label in countries]
-        country_codes = [code for code, _ in countries]
-        default_index = country_codes.index("jp")
-        selected_country_label = st.selectbox("Country/Region", options=country_labels, index=default_index)
-        # Extract full country name without (XX) suffix for the Airtable field
-        country_full_name = selected_country_label.split(" (")[0]
-        site = country_codes[country_labels.index(selected_country_label)]
+        # Build Dropdown Options
+        # Options will be: Region Name, All Subsidiaries, or Individual Country Name
+        country_labels = ["Asia", "Europe", "LATAM", "MEA", "All Subsidiaries"]
+        
+        # Add individual countries (sorted)
+        individual_sorted = sorted(all_subs, key=lambda x: x[1])
+        country_labels.extend([label for _, label in individual_sorted])
+
+        selected_option = st.selectbox("Country/Region", options=country_labels, index=4) # Default to All Subsidiaries
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
@@ -693,7 +710,12 @@ def main():
 
         st.divider()
         run_btn = st.button("Start Capture", type="primary", use_container_width=True)
-        run_all_btn = st.button("🚀 Run All Subsidiaries", use_container_width=True)
+        
+        # Stop Capture Button replaces "Run All Subsidiaries"
+        if st.button("🛑 Stop Capture", use_container_width=True):
+            st.session_state.stop_requested = True
+            st.warning("Stop requested. Will exit after current country finishes.")
+            
         st.divider()
         st.subheader("Activity Log")
         log_placeholder = st.empty()
@@ -703,76 +725,86 @@ def main():
         st.session_state.log_messages.append(msg)
         log_placeholder.markdown("\n\n".join(st.session_state.log_messages[::-1]))
 
-    # Logic for Single Capture
+    # Logic for Capture
     if run_btn:
         st.session_state.log_messages = []
-        captured_files = []
-        cloudinary_urls = []
-        url = f"https://www.lg.com/{site}/"
+        st.session_state.stop_requested = False
+        
+        # Determine the queue based on selection
+        capture_queue = []
+        if selected_option == "All Subsidiaries":
+            capture_queue = all_subs
+        elif selected_option in regions:
+            capture_queue = regions[selected_option]
+        else:
+            # It's an individual country
+            selected_code = next(code for code, label in all_subs if label == selected_option)
+            capture_queue = [(selected_code, selected_option)]
 
-        st.subheader(f"Results: {site.upper()} ({mode})")
-        cols = st.columns(3)
-
-        for idx, result in enumerate(
-                capture_hero_banners(url, site, mode, log_callback=add_log, upload_to_cloud=upload_enabled)):
-            img_path, slide_num, cloudinary_url = result
-            captured_files.append(img_path)
-            if cloudinary_url:
-                cloudinary_urls.append(cloudinary_url)
-                
-            with cols[idx % 3]:
-                st.image(img_path, caption=f"Slide {slide_num}")
-                if cloudinary_url: st.caption(f"☁️ [View on Cloudinary]({cloudinary_url})")
-
-        # After capture loop completes, save ONE record to Airtable if enabled
-        if upload_enabled and cloudinary_urls:
-            add_log("💾 Saving batch record to Airtable...")
-            airtable_id = save_to_airtable(site, mode, cloudinary_urls, country_full_name)
-            if airtable_id:
-                add_log(f"✅ Airtable record created: {airtable_id}")
-            else:
-                add_log("❌ Failed to create Airtable record.")
-
-        if captured_files:
-            st.divider()
-            zip_buffer = io.BytesIO()
-            with zipfile.ZipFile(zip_buffer, "w") as zf:
-                for fpath in captured_files: zf.write(fpath, os.path.basename(fpath))
-            st.download_button(label="📥 Download All Banners (ZIP)", data=zip_buffer.getvalue(),
-                               file_name=f"banners_{site}_{mode}_{datetime.now().strftime('%Y%m%d')}.zip",
-                               mime="application/zip", use_container_width=True)
-            st.success(f"✅ Capture complete! {len(captured_files)} images saved.")
-
-    # Logic for "Run All Subsidiaries"
-    if run_all_btn:
-        st.session_state.log_messages = []
-        add_log(f"🏁 Starting batch run for ALL {len(countries)} subsidiaries in **{mode}** mode...")
+        add_log(f"🏁 Starting capture for **{selected_option}** ({len(capture_queue)} sites) in **{mode}** mode...")
         
         progress_bar = st.progress(0)
         
-        for i, (c_code, c_label) in enumerate(countries):
-            c_full_name = c_label.split(" (")[0]
-            url = f"https://www.lg.com/{c_code}/"
-            
-            add_log(f"🌍 Processing **{c_label}**...")
+        # Single view for results if only 1 country, otherwise just show logs
+        if len(capture_queue) == 1:
+            site, label = capture_queue[0]
+            country_full_name = label.split(" (")[0]
+            url = f"https://www.lg.com/{site}/"
+            captured_files = []
             cloudinary_urls = []
             
-            # Run capture for this specific country
-            for result in capture_hero_banners(url, c_code, mode, log_callback=add_log, upload_to_cloud=upload_enabled):
-                _, _, cloudinary_url = result
+            st.subheader(f"Results: {site.upper()} ({mode})")
+            cols = st.columns(3)
+            
+            for idx, result in enumerate(capture_hero_banners(url, site, mode, log_callback=add_log, upload_to_cloud=upload_enabled)):
+                img_path, slide_num, cloudinary_url = result
+                captured_files.append(img_path)
                 if cloudinary_url:
                     cloudinary_urls.append(cloudinary_url)
-            
-            # Save to Airtable if enabled
+                    
+                with cols[idx % 3]:
+                    st.image(img_path, caption=f"Slide {slide_num}")
+                    if cloudinary_url: st.caption(f"☁️ [View on Cloudinary]({cloudinary_url})")
+
             if upload_enabled and cloudinary_urls:
-                add_log(f"💾 Saving {c_code.upper()} record to Airtable...")
-                save_to_airtable(c_code, mode, cloudinary_urls, c_full_name)
+                add_log("💾 Saving record to Airtable...")
+                save_to_airtable(site, mode, cloudinary_urls, country_full_name)
             
-            # Update progress
-            progress_bar.progress((i + 1) / len(countries))
+            if captured_files:
+                st.divider()
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zf:
+                    for fpath in captured_files: zf.write(fpath, os.path.basename(fpath))
+                st.download_button(label="📥 Download Banners (ZIP)", data=zip_buffer.getvalue(),
+                                   file_name=f"banners_{site}_{mode}_{datetime.now().strftime('%Y%m%d')}.zip",
+                                   mime="application/zip", use_container_width=True)
+                st.success(f"✅ Capture complete! {len(captured_files)} images saved.")
+        else:
+            # Batch process
+            for i, (c_code, c_label) in enumerate(capture_queue):
+                if st.session_state.stop_requested:
+                    add_log("🛑 Capture process stopped by user.")
+                    break
+                    
+                c_full_name = c_label.split(" (")[0]
+                url = f"https://www.lg.com/{c_code}/"
+                
+                add_log(f"🌍 Processing **{c_label}** ({i+1}/{len(capture_queue)})...")
+                cloudinary_urls = []
+                
+                for result in capture_hero_banners(url, c_code, mode, log_callback=add_log, upload_to_cloud=upload_enabled):
+                    _, _, cloudinary_url = result
+                    if cloudinary_url:
+                        cloudinary_urls.append(cloudinary_url)
+                
+                if upload_enabled and cloudinary_urls:
+                    save_to_airtable(c_code, mode, cloudinary_urls, c_full_name)
+                
+                progress_bar.progress((i + 1) / len(capture_queue))
             
-        add_log("✨ Batch processing of all subsidiaries complete!")
-        st.success("✅ All subsidiaries processed successfully.")
+            if not st.session_state.stop_requested:
+                add_log("✨ Batch processing complete!")
+                st.success("✅ Selected region/group processed successfully.")
 
 
 if __name__ == "__main__":
