@@ -668,11 +668,9 @@ def main():
             ("jp", "Japan (JP)"), ("hk_en", "Hong Kong (HK_EN)"), ("tw", "Taiwan (TW)"),
             ("in", "India (IN)"), ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"),
             ("th", "Thailand (TH)"), ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"),
-            ("id", "Indonesia (ID)"), ("kz", "Kazakhstan (KZ)"), ("kz", "Kazakhstan (KZ)"),
+            ("id", "Indonesia (ID)"), ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"),
             ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"), ("ma", "Morocco (MA)"),
-            ("sa_en", "Saudi Arabia (SA_EN)"), ("sa_ar", "Saudi Arabia (SA_AR)"), ("tr", "Turkey (TR)"),
-            ("za", "South Africa (ZA)")
-            
+            ("sa_en", "Saudi Arabia (SA_EN)"), ("sa_ar", "Saudi Arabia (SA_AR)"), ("za", "South Africa (ZA)")       
             
         ]
 
