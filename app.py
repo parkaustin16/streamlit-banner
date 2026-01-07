@@ -148,26 +148,33 @@ def upload_to_cloudinary(file_path, country_code, mode, slide_num):
 
 # --- AIRTABLE INTEGRATION ---
 
-def save_to_airtable(country_code, mode, slide_num, image_url, cloudinary_id, capture_date):
-    """Save capture metadata to Airtable."""
+def save_to_airtable(country_code, mode, urls, full_country_name):
+    """Save all capture URLs to a single Airtable record."""
     if not all([AIRTABLE_API_KEY, AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME]):
         st.warning("⚠️ Airtable credentials not configured. Please set them in .env file or Streamlit secrets.")
         return None
 
     try:
+        # Determine banner type and record name
+        banner_type_label = "PC" if mode.lower() == "desktop" else "Mobile"
+        mode_suffix = "pc" if mode.lower() == "desktop" else "mobile"
+        record_name = f"{country_code.lower()}-hero-banner-{mode_suffix}-gp1"
+        capture_date = datetime.now().strftime('%m/%d/%Y')
+        
+        # Format the URLs as a single string (newline separated)
+        url_text = "\n".join(urls)
+
         # Method 1: Try using pyairtable with SSL fix
         try:
             api = Api(AIRTABLE_API_KEY)
             table = api.table(AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME)
 
             record = {
-                "Country": country_code.upper(),
-                "Mode": mode.capitalize(),
-                "Slide Number": slide_num,
-                "Image URL": image_url,
-                "Cloudinary ID": cloudinary_id,
-                "Capture Date": capture_date,
-                "Timestamp": datetime.now().isoformat(),
+                "Name": record_name,
+                "Country": full_country_name,
+                "Date": capture_date,
+                "banner type": banner_type_label,
+                "URLs": url_text
             }
 
             created_record = table.create(record)
@@ -186,13 +193,11 @@ def save_to_airtable(country_code, mode, slide_num, image_url, cloudinary_id, ca
 
             data = {
                 "fields": {
-                    "Country": country_code.upper(),
-                    "Mode": mode.capitalize(),
-                    "Slide Number": slide_num,
-                    "Image URL": image_url,
-                    "Cloudinary ID": cloudinary_id,
-                    "Capture Date": capture_date,
-                    "Timestamp": datetime.now().isoformat(),
+                    "Name": record_name,
+                    "Country": full_country_name,
+                    "Date": capture_date,
+                    "banner type": banner_type_label,
+                    "URLs": url_text
                 }
             }
 
@@ -543,6 +548,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
                     if not is_correct_index and attempt < 3:
                         log(f"   ⚠️ Swiper active index mismatch. Retrying...")
+                        time.sleep(0.5)
                         continue
 
                     # 5. Capture Logic
@@ -579,17 +585,14 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         log(f"✅ Captured: {filename}")
 
                         cloudinary_url = None
-                        airtable_id = None
+                        cloudinary_id = None
 
                         if upload_to_cloud:
                             log(f"☁️ Uploading to Cloud...")
                             cloudinary_url, cloudinary_id = upload_to_cloudinary(filepath, country_code, mode,
                                                                                  slide_num)
-                            if cloudinary_url:
-                                airtable_id = save_to_airtable(country_code, mode, slide_num, cloudinary_url,
-                                                               cloudinary_id, datetime.now().strftime('%Y-%m-%d'))
 
-                        yield filepath, slide_num, cloudinary_url, airtable_id
+                        yield filepath, slide_num, cloudinary_url
                         success = True
                         break
 
@@ -634,10 +637,9 @@ def main():
                     write_data = {
                         "fields": {
                             "Country": "TEST",
-                            "Mode": "Test",
-                            "Slide Number": 0,
-                            "Capture Date": datetime.now().strftime('%Y-%m-%d'),
-                            "Timestamp": "CONNECTION_TEST"
+                            "Date": datetime.now().strftime('%m/%d/%Y'),
+                            "banner type": "PC",
+                            "URLs": "CONNECTION_TEST"
                         }
                     }
                     write_response = requests.post(read_url, json=write_data, headers=headers, verify=False)
@@ -677,8 +679,10 @@ def main():
         country_labels = [label for _, label in countries]
         country_codes = [code for code, _ in countries]
         default_index = country_codes.index("jp")
-        selected_country = st.selectbox("Country/Region", options=country_labels, index=default_index)
-        site = country_codes[country_labels.index(selected_country)]
+        selected_country_label = st.selectbox("Country/Region", options=country_labels, index=default_index)
+        # Extract full country name without (XX) suffix for the Airtable field
+        country_full_name = selected_country_label.split(" (")[0]
+        site = country_codes[country_labels.index(selected_country_label)]
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
@@ -696,6 +700,7 @@ def main():
     if run_btn:
         st.session_state.log_messages = []
         captured_files = []
+        cloudinary_urls = []
         url = f"https://www.lg.com/{site}/"
 
         def add_log(message):
@@ -708,11 +713,23 @@ def main():
 
         for idx, result in enumerate(
                 capture_hero_banners(url, site, mode, log_callback=add_log, upload_to_cloud=upload_enabled)):
-            img_path, slide_num, cloudinary_url, airtable_id = result
+            img_path, slide_num, cloudinary_url = result
             captured_files.append(img_path)
+            if cloudinary_url:
+                cloudinary_urls.append(cloudinary_url)
+                
             with cols[idx % 3]:
                 st.image(img_path, caption=f"Slide {slide_num}")
                 if cloudinary_url: st.caption(f"☁️ [View on Cloudinary]({cloudinary_url})")
+
+        # After capture loop completes, save ONE record to Airtable if enabled
+        if upload_enabled and cloudinary_urls:
+            add_log("💾 Saving batch record to Airtable...")
+            airtable_id = save_to_airtable(site, mode, cloudinary_urls, country_full_name)
+            if airtable_id:
+                add_log(f"✅ Airtable record created: {airtable_id}")
+            else:
+                add_log("❌ Failed to create Airtable record.")
 
         if captured_files:
             st.divider()
