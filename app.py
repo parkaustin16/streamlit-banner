@@ -658,16 +658,22 @@ def main():
 
         countries = [
             ("au", "Australia (AU)"), ("uk", "United Kingdom (UK)"), ("ca_en", "Canada (CA_EN)"),
-            ("ca_fr", "Canada (CA_FR)"), ("fr", "France (FR)"), ("de", "Germany (DE)"),
-            ("it", "Italy (IT)"), ("es", "Spain (ES)"), ("nl", "Netherlands (NL)"),
+            ("ca_fr", "Canada (CA_FR)"), ("ch_fr", "Switzerland (CH_FR)"), ("ch_de", "Switzerland (CH_DE)"),
+            ("fr", "France (FR)"), ("de", "Germany (DE)"), ("it", "Italy (IT)"),
+            ("es", "Spain (ES)"), ("nl", "Netherlands (NL)"),("cz", "Czech Republic (CZ)"),
             ("se", "Sweden (SE)"), ("pt", "Portugal (PT)"), ("hu", "Hungary (HU)"),
-            ("pl", "Poland (PL)"), ("at", "Austria (AT)"), ("cz", "Czech Republic (CZ)"),
-            ("mx", "Mexico (MX)"), ("br", "Brazil (BR)"), ("ar", "Argentina (AR)"),
-            ("cl", "Chile (CL)"), ("co", "Colombia (CO)"), ("pe", "Peru (PE)"),
-            ("pa", "Panama (PA)"), ("jp", "Japan (JP)"), ("hk", "Hong Kong (HK)"),
-            ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"), ("th", "Thailand (TH)"),
-            ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"), ("in", "Indonesia (IN)"),
-            ("tw", "Taiwan (TW)")
+            ("pl", "Poland (PL)"), ("at", "Austria (AT)"), ("mx", "Mexico (MX)")
+            ("br", "Brazil (BR)"), ("ar", "Argentina (AR)"), ("cl", "Chile (CL)"),
+            ("co", "Colombia (CO)"), ("pe", "Peru (PE)"), ("pa", "Panama (PA)"),
+            ("jp", "Japan (JP)"), ("hk_en", "Hong Kong (HK_EN)"),("tw", "Taiwan (TW)"),
+            ("in", "India (IN)"), ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"),
+            ("th", "Thailand (TH)"), ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"),
+            ("id", "Indonesia (ID)"), ("kz", "Kazakhstan (KZ)"), ("kz", "Kazakhstan (KZ)"),
+            ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"), ("ma", "Morocco (MA)"),
+            ("sa_en", "Saudi Arabia (SA_EN)"), ("sa_ar", "Saudi Arabia (SA_AR)"), ("tr", "Turkey (TR)"),
+            ("za", "South Africa (ZA)")
+            
+            
         ]
 
         country_labels = [label for _, label in countries]
