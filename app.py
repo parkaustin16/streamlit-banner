@@ -686,7 +686,7 @@ def main():
                 ("co", "Colombia (CO)"), ("pe", "Peru (PE)"), ("pa", "Panama (PA)")
             ],
             "MEA": [
-                ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"), ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"),
+                ("kz", "Kazakhstan (KZ)"), ("tr", "Turkiye (TR)"), ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"),
                 ("ma", "Morocco (MA)"), ("sa_en", "Saudi Arabia (SA_EN)"), ("sa", "Saudi Arabia (SA)"), 
                 ("za", "South Africa (ZA)")
             ],
