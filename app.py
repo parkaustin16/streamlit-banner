@@ -642,7 +642,6 @@ def main():
                             "country": "Australia",
                             "period": datetime.now().strftime('%m/%d/%Y'),
                             "banner-type": "hero-banner-pc",
-                            "URLs": "https://example.com/png"
                         }
                     }
                     write_response = requests.post(read_url, json=write_data, headers=headers, verify=False)
