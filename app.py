@@ -156,10 +156,11 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 
     try:
         # Determine banner type and record name
-        banner_type_label = "hero-banner-pc" if mode.lower() == "hero-banner-pc" else "hero-banner-mo"
-        mode_suffix = "hero-banner-pc" if mode.lower() == "hero-banner-pc" else "hero-banner-mo"
+        banner_type_label = "hero-banner-pc" if mode.lower() == "desktop" else "hero-banner-mo"
+        mode_suffix = "pc" if mode.lower() == "desktop" else "mobile"
         record_name = f"{country_code.lower()}-hero-banner-{mode_suffix}-gp1"
         capture_date = datetime.now().strftime('%m/%d/%Y')
+        domain = {country_code}
         
         # Format the URLs as a single string (newline separated)
         url_text = ", ".join(urls)
@@ -170,6 +171,7 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
             table = api.table(AIRTABLE_BASE_ID, AIRTABLE_TABLE_NAME)
 
             record = {
+                "domain": domain,
                 "country": full_country_name,
                 "period": capture_date,
                 "banner-type": banner_type_label,
@@ -192,6 +194,7 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 
             data = {
                 "fields": {
+                    "domain": domain,
                     "country": full_country_name,
                     "period": capture_date,
                     "banner-type": banner_type_label,
@@ -637,9 +640,9 @@ def main():
                     # 2. WRITE TEST (Functional check without the info text)
                     write_data = {
                         "fields": {
-                            "country": "TEST",
+                            "country": "Australia",
                             "period": datetime.now().strftime('%m/%d/%Y'),
-                            "banner-type": "PC",
+                            "banner-type": "hero-banner-pc",
                             "URLs": "https://example.com/png"
                         }
                     }
