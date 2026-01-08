@@ -664,13 +664,13 @@ def main():
         # Regional Groups Definition
         regions = {
             "Asia": [
-                ("au", "Australia (AU)"), ("jp", "Japan (JP)"), ("hk_en", "Hong Kong (HK_EN)"), ("tw", "Taiwan (TW)"),
+                ("au", "Australia (AU)"), ("jp", "Japan (JP)"), ("hk-en", "Hong Kong (HK-EN)"), ("tw", "Taiwan (TW)"),
                 ("in", "India (IN)"), ("sg", "Singapore (SG)"), ("my", "Malaysia (MY)"),
                 ("th", "Thailand (TH)"), ("vn", "Vietnam (VN)"), ("ph", "Philippines (PH)"),
                 ("id", "Indonesia (ID)")
             ],
             "Europe": [
-                ("uk", "United Kingdom (UK)"), ("ch_fr", "Switzerland (CH_FR)"), ("ch_de", "Switzerland (CH_DE)"),
+                ("uk", "United Kingdom (UK)"), ("ch_fr", "Switzerland (CH_FR)"), ("ch-de", "Switzerland (CH-DE)"),
                 ("fr", "France (FR)"), ("de", "Germany (DE)"), ("it", "Italy (IT)"),
                 ("es", "Spain (ES)"), ("nl", "Netherlands (NL)"), ("cz", "Czech Republic (CZ)"),
                 ("se", "Sweden (SE)"), ("pt", "Portugal (PT)"), ("hu", "Hungary (HU)"),
@@ -681,12 +681,12 @@ def main():
                 ("co", "Colombia (CO)"), ("pe", "Peru (PE)"), ("pa", "Panama (PA)")
             ],
             "MEA": [
-                ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"), ("eg_en", "Egypt (EG_EN)"), ("eg_ar", "Egypt (EG_AR)"),
-                ("ma", "Morocco (MA)"), ("sa_en", "Saudi Arabia (SA_EN)"), ("sa_ar", "Saudi Arabia (SA_AR)"), 
+                ("kz", "Kazakhstan (KZ)"), ("tr", "Turkey (TR)"), ("eg-en", "Egypt (EG-EN)"), ("eg-ar", "Egypt (EG-AR)"),
+                ("ma", "Morocco (MA)"), ("sa-en", "Saudi Arabia (SA-EN)"), ("sa_ar", "Saudi Arabia (SA-AR)"), 
                 ("za", "South Africa (ZA)")
             ],
             "Canada": [
-                ("ca_en", "Canada (CA_EN)"), ("ca_fr", "Canada (CA_FR)")
+                ("ca-en", "Canada (CA-EN)"), ("ca_fr", "Canada (CA-FR)")
             ]
         }
         
