@@ -156,8 +156,8 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 
     try:
         # Determine banner type and record name
-        banner_type_label = "PC" if mode.lower() == "desktop" else "Mobile"
-        mode_suffix = "pc" if mode.lower() == "desktop" else "mobile"
+        banner_type_label = "hero-banner-pc" if mode.lower() == "hero-banner-pc" else "hero-banner-mo"
+        mode_suffix = "hero-banner-pc" if mode.lower() == "hero-banner-pc" else "hero-banner-mo"
         record_name = f"{country_code.lower()}-hero-banner-{mode_suffix}-gp1"
         capture_date = datetime.now().strftime('%m/%d/%Y')
         
