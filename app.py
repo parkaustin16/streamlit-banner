@@ -490,33 +490,27 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 for attempt in range(4):  # Increased to 4 attempts for tricky sites
                     log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
-                    # 1. Force the swiper state & stop autoplay via JS (EXECUTED ON THE SPECIFIC CAROUSEL)
-                    # We use hero_carousel.evaluate instead of page.evaluate to ensure we target the right one
-                    try:
-                        hero_carousel.evaluate(f"""
-                            (car, idx) => {{
-                                if (car && car.swiper) {{
-                                    car.swiper.autoplay.stop();
-                                    car.swiper.params.speed = 0;
+                    # 1. Force the swiper state & stop autoplay via JS
+                    page.evaluate(f"""
+                        (idx) => {{
+                            const car = document.querySelector('.cmp-carousel');
+                            if (car && car.swiper) {{
+                                car.swiper.autoplay.stop();
+                                // Force zero speed for instant jump to avoid animation blur
+                                car.swiper.params.speed = 0;
+                                if (typeof car.swiper.slideToLoop === 'function') {{
+                                    car.swiper.slideToLoop(idx);
+                                }} else {{
+                                    car.swiper.slideTo(idx);
                                 }}
-                                // Attempt to find indicators INSIDE this specific carousel
-                                const inds = car.querySelectorAll('.cmp-carousel__indicator');
-                                if (inds[{i}]) {{
-                                    inds[{i}].click();
-                                }} else if (car.swiper) {{
-                                    // Fallback to swiper method if dots not found/clickable
-                                    if (typeof car.swiper.slideToLoop === 'function') {{
-                                        car.swiper.slideToLoop({i});
-                                    }} else {{
-                                        car.swiper.slideTo({i});
-                                    }}
-                                }}
+                            }} else {{
+                                const inds = document.querySelectorAll('.cmp-carousel__indicator');
+                                if (inds[idx]) inds[idx].click();
                             }}
-                        """, i)
-                    except Exception as nav_e:
-                         log(f"   ⚠️ Navigation error: {str(nav_e)}")
+                        }}
+                    """, i)
 
-                    # 2. Hard wait for visual stability
+                    # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
 
                     # 3. Apply styles for clean capture
@@ -548,12 +542,12 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     is_correct_index = signature_data['match']
 
                     if current_sig in captured_signatures and attempt < 3:
-                        log(f"   ⚠️ Duplicate detected (Carousel stuck). Retrying...")
+                        log(f"   ⚠️ Duplicate detected. Retrying navigation...")
                         time.sleep(0.5)
                         continue
 
                     if not is_correct_index and attempt < 3:
-                        log(f"   ⚠️ Swiper index mismatch. Retrying...")
+                        log(f"   ⚠️ Swiper active index mismatch. Retrying...")
                         time.sleep(0.5)
                         continue
 
