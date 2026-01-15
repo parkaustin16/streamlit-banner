@@ -215,78 +215,83 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
+    """
+    Comprehensive CSS cleanup with MutationObserver.
+    Ensures 'LG Spin to Win' and other popups stay hidden even if dynamically injected.
+    """
     page_obj.evaluate("""
-        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
-        const style = document.createElement('style');
-        style.innerHTML = `
-            [class*="chat"], [id*="chat"], [class*="proactive"], 
-        .alk-container, #genesys-chat, .genesys-messenger,
-        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-        .c-membership-popup, 
-        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
-        #lg-spin-root, .lg-spin-backdrop, .lg-spin-modal
-            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+        // 1. Setup persistent suppression style
+        const styleId = 'clean-styles-injection';
+        if (!document.getElementById(styleId)) {
+            const style = document.createElement('style');
+            style.id = styleId;
+            style.innerHTML = `
+                /* Hide LG Spinner and common popups */
+                #lg-spin-root, .lg-spin-backdrop, .lg-spin-modal, .lg-spin-wheel-wrap,
+                [id*="lg-spin"], [class*="lg-spin"], 
+                [class*="chat"], [id*="chat"], [class*="proactive"], 
+                .alk-container, #genesys-chat, .genesys-messenger,
+                .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+                .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+                .c-membership-popup, 
+                [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+                .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+                .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+                .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+                { 
+                    display: none !important; 
+                    visibility: hidden !important; 
+                    opacity: 0 !important; 
+                    pointer-events: none !important;
+                    z-index: -1 !important;
+                }
+
+                /* Disable transitions to prevent motion blur */
+                *, *::before, *::after {
+                    transition-duration: 0s !important;
+                    animation-duration: 0s !important;
+                    transition-delay: 0s !important;
+                    animation-delay: 0s !important;
+                }
+
+                /* Sharpness Fixes */
+                .cmp-carousel__item, .c-hero-banner, img {
+                    image-rendering: -webkit-optimize-contrast !important;
+                    image-rendering: crisp-edges !important;
+                    transform: translateZ(0) !important;
+                    backface-visibility: hidden !important;
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 2. Immediate & Recursive removal function
+        const purgePopups = () => {
+            // Remove the LG Spin root completely from DOM
+            const spinner = document.getElementById('lg-spin-root');
+            if (spinner) spinner.remove();
+
+            // Hide headers and navigation that might overlap banners
+            const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn'];
+            hideSelectors.forEach(s => {
+                document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
+            });
             
-            /* SPEED: Disable transitions for instant navigation */
-            *, *::before, *::after {
-                transition-duration: 0s !important;
-                animation-duration: 0s !important;
-                transition-delay: 0s !important;
-                animation-delay: 0s !important;
-            }
+            // Ensure videos are paused
+            document.querySelectorAll('video').forEach(v => v.pause());
+        };
 
-            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
-            .cmp-carousel__item, .c-hero-banner, img {
-                image-rendering: -webkit-optimize-contrast !important;
-                image-rendering: crisp-edges !important;
-                transform: translateZ(0) !important;
-                backface-visibility: hidden !important;
-                perspective: 1000 !important;
-            }
-            /* LG Spin Modal Styles */
-            .lg-spin-backdrop {
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background: rgba(0,0,0,0.8); z-index: 9999;
-            }
-            .lg-spin-modal {
-                position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                background: #fff; padding: 30px; border-radius: 20px; z-index: 10000;
-                text-align: center; direction: rtl; font-family: sans-serif; max-width: 450px; width: 90%;
-            }
-            .lg-spin-wheel-wrap { position: relative; margin: 20px auto; width: 300px; height: 300px; }
-            #lg-spin-canvas { width: 100%; height: 100%; border-radius: 50%; border: 8px solid #a50034; }
-            .lg-spin-btn { 
-                background: #a50034; color: white; border: none; padding: 12px 30px; 
-                border-radius: 25px; cursor: pointer; font-weight: bold; margin-top: 15px; 
-            }
-            .lg-spin-badge { background: #f4f4f4; display: inline-block; padding: 5px 15px; border-radius: 15px; }
-            .lg-spin-x { position: absolute; top: 15px; right: 15px; border: none; background: none; font-size: 24px; cursor: pointer; }
-            .lg-spin-result { margin-top: 15px; padding: 15px; background: #f9f9f9; border-radius: 10px; }
-            .lg-spin-pin { 
-                position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
-                width: 0; height: 0; border-left: 15px solid transparent; 
-                border-right: 15px solid transparent; border-top: 30px solid #a50034; z-index: 10;
-            }
-        `;
-        document.head.appendChild(style);
+        // 3. The Guard: Watch for new elements being added (like the Spinner)
+        if (!window._popupObserver) {
+            window._popupObserver = new MutationObserver(() => purgePopups());
+            window._popupObserver.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+        }
 
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
-        hideSelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
-        });
-
-        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
-        opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
-        });
-
-        // Pause videos immediately to prevent motion blur
-        document.querySelectorAll('video').forEach(v => v.pause());
+        // Run once immediately
+        purgePopups();
     """)
 
 
