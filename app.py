@@ -441,7 +441,23 @@ def find_hero_carousel(page, log_callback=None):
 
     return hero_carousel
 
+def block_spin_to_win(page):
+    """
+    Hard-block LG Spin-to-Win script by filename
+    """
 
+    def route_handler(route):
+        req = route.request
+        url = req.url.lower()
+
+        # 🎯 Exact script block
+        if "spinner10-rtl.js" in url:
+            return route.abort()
+
+        return route.continue_()
+
+    page.route("**/*", route_handler)
+    
 def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, upload_to_cloud=False):
     def log(message):
         if log_callback:
@@ -469,7 +485,8 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
-
+        block_spin_to_win(page)
+        
         def block_chat_requests(route):
             url_str = route.request.url.lower()
             chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
@@ -480,7 +497,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 route.continue_()
 
         page.route("**/*", block_chat_requests)
-
+        
         try:
             log(f"🌐 Navigating to {url}...")
             # SPEED FIX: Use domcontentloaded for faster start
