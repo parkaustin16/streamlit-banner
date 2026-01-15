@@ -215,96 +215,56 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Deep Shadow DOM piercer and interval-based cleanup for LG Spin components."""
+    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
-        // 1. Singleton Lock & Global Flags
-        window.__LG_SPIN_SINGLETON__ = true;
-        window.LG_SPIN_DISABLE = true;
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
+        const style = document.createElement('style');
+        style.innerHTML = `
+            [class*="chat"], [id*="chat"], [class*="proactive"], 
+        .alk-container, #genesys-chat, .genesys-messenger,
+        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        .c-membership-popup, 
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-        // 2. Recursive Shadow DOM Piercer
-        const deepRemove = (root) => {
-            const spinSelectors = [
-                '#lg-spin-root', '.lg-spin-root', '#lg-spin-canvas', '#lg-spin-btn',
-                '#lg-spin-result', '#lg-spin-code', '#lg-spin-note', '#lg-spin-copy',
-                '#embed-6db47dc8c5', '.lg-spin-backdrop', '.lg-spin-modal', 
-                '[id*="lg-spin"]', '[class*="lg-spin"]', '[id*="spinner"]', 
-                'iframe[src*="spinner"]', '[data-lg-spin-close]'
-            ].join(',');
+            /* SPEED: Disable transitions for instant navigation */
+            *, *::before, *::after {
+                transition-duration: 0s !important;
+                animation-duration: 0s !important;
+                transition-delay: 0s !important;
+                animation-delay: 0s !important;
+            }
 
-            // Check current root
-            root.querySelectorAll(spinSelectors).forEach(el => {
-                el.style.setProperty('display', 'none', 'important');
-                if (el.parentNode) el.parentNode.removeChild(el);
-            });
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
+            .cmp-carousel__item, .c-hero-banner, img {
+                image-rendering: -webkit-optimize-contrast !important;
+                image-rendering: crisp-edges !important;
+                transform: translateZ(0) !important;
+                backface-visibility: hidden !important;
+                perspective: 1000 !important;
+            }
+        `;
+        document.head.appendChild(style);
 
-            // Recurse into Shadow Roots
-            root.querySelectorAll('*').forEach(el => {
-                if (el.shadowRoot) deepRemove(el.shadowRoot);
-            });
-        };
-
-        // 3. Continuous Execution (Interval based Force-Hider)
-        if (!window.__LG_DEEP_CLEAN_INTERVAL__) {
-            window.__LG_DEEP_CLEAN_INTERVAL__ = setInterval(() => {
-                deepRemove(document);
-                
-                // Hunt for iframes and block them
-                document.querySelectorAll('iframe').forEach(frame => {
-                    try {
-                        const src = frame.src || '';
-                        if (src.includes('spinner') || src.includes('spin')) frame.remove();
-                    } catch(e) {}
-                });
-            }, 100);
-        }
-
-        // 4. Global CSS Shield
-        const styleId = 'lg-shadow-kill-switch';
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.innerHTML = `
-                /* LG SPIN TO WIN SPECIFIC BLOCK */
-                #lg-spin-root, .lg-spin-root, #lg-spin-canvas, #lg-spin-btn,
-                #lg-spin-result, #lg-spin-code, #lg-spin-note, #lg-spin-copy,
-                #embed-6db47dc8c5, .lg-spin-backdrop, .lg-spin-modal, 
-                [id*="lg-spin"], [class*="lg-spin"], [id*="spinner"] { 
-                    display: none !important; 
-                    visibility: hidden !important; 
-                    opacity: 0 !important; 
-                    height: 0 !important;
-                    width: 0 !important;
-                    position: absolute !important;
-                    top: -9999px !important;
-                    z-index: -99999 !important;
-                    pointer-events: none !important;
-                }
-
-                /* Standard UI Cleanups */
-                [class*="chat"], [id*="chat"], .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-                .c-notification-banner, .c-membership-popup, .l-cookie-teaser { 
-                    display: none !important; 
-                }
-
-                *, *::before, *::after {
-                    transition-duration: 0s !important;
-                    animation-duration: 0s !important;
-                    transition-delay: 0s !important;
-                    animation-delay: 0s !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
-
-        // 5. Cleanup Navigation & UI Bloat
-        ['.c-header', '.navigation', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'].forEach(s => {
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
-        
-        // Pause any videos
+
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
+        opacitySelectors.forEach(s => {
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
+        });
+
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
-    
+
+
 def find_hero_carousel(page, log_callback=None):
     """
     Intelligently identify the FIRST/MAIN hero banner carousel on LG.com pages.
