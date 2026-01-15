@@ -215,74 +215,76 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Extreme cleanup to neutralize LG Spin across all potential injection methods."""
+    """Deep Shadow DOM piercer and interval-based cleanup for LG Spin components."""
     page_obj.evaluate("""
         // 1. Singleton Lock & Global Flags
         window.__LG_SPIN_SINGLETON__ = true;
         window.LG_SPIN_DISABLE = true;
 
-        // 2. Continuous Force-Hider (Interval)
-        // This catches elements that bypass MutationObservers or re-render via scripts
-        if (!window.__LG_FORCE_HIDDEN_INTERVAL__) {
+        // 2. Recursive Shadow DOM Piercer
+        const deepRemove = (root) => {
             const spinSelectors = [
-                '#lg-spin-root', '.lg-spin-root', '#embed-6db47dc8c5', 
-                '.lg-spin-backdrop', '.lg-spin-modal', '[id*="lg-spin"]', 
-                '[class*="lg-spin"]', '[id*="spinner"]', 'iframe[src*="spinner"]'
+                '#lg-spin-root', '.lg-spin-root', '#lg-spin-canvas', '#lg-spin-btn',
+                '#lg-spin-result', '#lg-spin-code', '#lg-spin-note', '#lg-spin-copy',
+                '#embed-6db47dc8c5', '.lg-spin-backdrop', '.lg-spin-modal', 
+                '[id*="lg-spin"]', '[class*="lg-spin"]', '[id*="spinner"]', 
+                'iframe[src*="spinner"]', '[data-lg-spin-close]'
             ].join(',');
 
-            window.__LG_FORCE_HIDDEN_INTERVAL__ = setInterval(() => {
-                document.querySelectorAll(spinSelectors).forEach(el => {
-                    el.style.setProperty('display', 'none', 'important');
-                    el.style.setProperty('visibility', 'hidden', 'important');
-                    el.style.setProperty('opacity', '0', 'important');
-                    // Completely remove if possible
-                    if (el.parentNode) el.parentNode.removeChild(el);
-                });
+            // Check current root
+            root.querySelectorAll(spinSelectors).forEach(el => {
+                el.style.setProperty('display', 'none', 'important');
+                if (el.parentNode) el.parentNode.removeChild(el);
+            });
+
+            // Recurse into Shadow Roots
+            root.querySelectorAll('*').forEach(el => {
+                if (el.shadowRoot) deepRemove(el.shadowRoot);
+            });
+        };
+
+        // 3. Continuous Execution (Interval based Force-Hider)
+        if (!window.__LG_DEEP_CLEAN_INTERVAL__) {
+            window.__LG_DEEP_CLEAN_INTERVAL__ = setInterval(() => {
+                deepRemove(document);
                 
-                // Hunt for iframes that might be hosting the spinner
+                // Hunt for iframes and block them
                 document.querySelectorAll('iframe').forEach(frame => {
                     try {
-                        const content = frame.src || '';
-                        if (content.includes('spinner') || content.includes('spin')) {
-                            frame.remove();
-                        }
+                        const src = frame.src || '';
+                        if (src.includes('spinner') || src.includes('spin')) frame.remove();
                     } catch(e) {}
                 });
             }, 100);
         }
 
-        // 3. Global CSS Shield (Injected into Head)
-        const styleId = 'lg-nuclear-kill-switch';
+        // 4. Global CSS Shield
+        const styleId = 'lg-shadow-kill-switch';
         if (!document.getElementById(styleId)) {
             const style = document.createElement('style');
             style.id = styleId;
             style.innerHTML = `
-                /* TARGET EVERYTHING REMOTELY SPIN-RELATED */
-                #lg-spin-root, .lg-spin-root, #embed-6db47dc8c5, .lg-spin-backdrop, 
-                .lg-spin-modal, [id*="lg-spin"], [class*="lg-spin"], [id*="spinner"],
-                .cmp-embed:has([id*="lg-spin"]) { 
+                /* LG SPIN TO WIN SPECIFIC BLOCK */
+                #lg-spin-root, .lg-spin-root, #lg-spin-canvas, #lg-spin-btn,
+                #lg-spin-result, #lg-spin-code, #lg-spin-note, #lg-spin-copy,
+                #embed-6db47dc8c5, .lg-spin-backdrop, .lg-spin-modal, 
+                [id*="lg-spin"], [class*="lg-spin"], [id*="spinner"] { 
                     display: none !important; 
                     visibility: hidden !important; 
                     opacity: 0 !important; 
-                    pointer-events: none !important; 
                     height: 0 !important;
                     width: 0 !important;
                     position: absolute !important;
                     top: -9999px !important;
                     z-index: -99999 !important;
+                    pointer-events: none !important;
                 }
 
                 /* Standard UI Cleanups */
-                [class*="chat"], [id*="chat"], [class*="proactive"], 
-                .alk-container, #genesys-chat, .genesys-messenger,
-                .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-                .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-                .c-membership-popup, 
-                [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-                .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-                .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-                .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
-                { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+                [class*="chat"], [id*="chat"], .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+                .c-notification-banner, .c-membership-popup, .l-cookie-teaser { 
+                    display: none !important; 
+                }
 
                 *, *::before, *::after {
                     transition-duration: 0s !important;
@@ -294,19 +296,15 @@ def apply_clean_styles(page_obj):
             document.head.appendChild(style);
         }
 
-        // 4. Manual immediate hide for common LG nav
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
-        hideSelectors.forEach(s => {
+        // 5. Cleanup Navigation & UI Bloat
+        ['.c-header', '.navigation', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'].forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
-
-        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
-        opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
-        });
-
+        
+        // Pause any videos
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
+    
 def find_hero_carousel(page, log_callback=None):
     """
     Intelligently identify the FIRST/MAIN hero banner carousel on LG.com pages.
