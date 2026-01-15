@@ -215,43 +215,57 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
+    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and an Anti-Reversion Guard."""
     page_obj.evaluate("""
-        // 1. Setup a "Nuclear" removal function for the spin wheel
-        const purgeSpinWheel = () => {
-            // Target by ID, Class, and the specific script tag
-            const selectors = [
-                '#lg-spin-root', 
-                '.lg-spin-root', 
-                '.lg-spin-backdrop', 
-                'script[src*="spinner10-rtl.js"]',
-                '.cmp-embed:has(#lg-spin-root)', // Removes the AEM container holding the wheel
-                '.aem-GridColumn:has(#lg-spin-root)'
-            ];
-            
-            selectors.forEach(s => {
-                document.querySelectorAll(s).forEach(el => {
-                    // Remove the element and its parent if it's just a wrapper for the spinner
-                    el.remove();
-                });
-            });
+        // 1. Function to aggressively hide and disable the wheel
+        const neutralizeWheel = () => {
+            const wheel = document.getElementById('lg-spin-root');
+            if (wheel) {
+                // Force hide via styles that beat inline JS
+                wheel.style.setProperty('display', 'none', 'important');
+                wheel.style.setProperty('visibility', 'hidden', 'important');
+                wheel.style.setProperty('opacity', '0', 'important');
+                wheel.style.setProperty('pointer-events', 'none', 'important');
+                
+                // Move it out of the viewport just in case
+                wheel.style.setProperty('position', 'absolute', 'important');
+                wheel.style.setProperty('top', '-10000px', 'important');
+            }
         };
 
-        // 2. Run immediately and set a heartbeat to catch late injection
-        purgeSpinWheel();
-        if (!window.spinWatch) {
-            window.spinWatch = setInterval(purgeSpinWheel, 250);
-        }
+        // 2. Set up a MutationObserver to block any attribute changes (like showing the wheel)
+        const attrObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && (mutation.target.id === 'lg-spin-root' || mutation.target.classList.contains('lg-spin-root'))) {
+                    neutralizeWheel();
+                }
+                // If the element is deleted and re-added, catch it here
+                mutation.addedNodes.forEach(node => {
+                    if (node.id === 'lg-spin-root' || (node.classList && node.classList.contains('lg-spin-root'))) {
+                        neutralizeWheel();
+                    }
+                });
+            });
+        });
 
+        attrObserver.observe(document.documentElement, { 
+            attributes: true, 
+            childList: true, 
+            subtree: true, 
+            attributeFilter: ['style', 'class', 'aria-hidden'] 
+        });
+
+        // 3. Initial execution
+        neutralizeWheel();
+
+        // 4. Inject the Global CSS Reset
         const style = document.createElement('style');
         style.innerHTML = `
-            /* Hide the spin wheel via CSS as a backup */
             #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, .lg-spin-modal {
                 display: none !important;
                 visibility: hidden !important;
                 opacity: 0 !important;
                 pointer-events: none !important;
-                left: -9999px !important; /* Move it off-screen */
             }
 
             [class*="chat"], [id*="chat"], [class*="proactive"], 
@@ -265,7 +279,7 @@ def apply_clean_styles(page_obj):
             .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
             { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-            /* SPEED: Disable transitions for instant navigation */
+            /* SPEED: Disable transitions */
             *, *::before, *::after {
                 transition-duration: 0s !important;
                 animation-duration: 0s !important;
@@ -273,7 +287,7 @@ def apply_clean_styles(page_obj):
                 animation-delay: 0s !important;
             }
 
-            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
+            /* Sharpness Fixes */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
@@ -284,6 +298,7 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
+        // 5. Cleanup standard UI elements
         const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
@@ -294,7 +309,6 @@ def apply_clean_styles(page_obj):
             document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
 
-        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
