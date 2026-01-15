@@ -215,12 +215,28 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening and Speed fixes + LG Spin-to-Win suppression."""
+    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Spin to Win removal."""
     page_obj.evaluate("""
-        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
+        // Explicitly remove the Spin to Win modal and its components
+        const spinToWinElements = [
+            '#lg-spin-root',
+            '.lg-spin-root',
+            '.lg-spin-backdrop',
+            '.lg-spin-modal',
+            '[aria-label="Spin to Win"]'
+        ];
+        spinToWinElements.forEach(selector => {
+            document.querySelectorAll(selector).forEach(el => el.remove());
+        });
 
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
+        
         const style = document.createElement('style');
         style.innerHTML = `
+            /* Hide Spin to Win if it somehow reappears or is shadow-dom adjacent */
+            #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, .lg-spin-modal,
+            [class*="lg-spin-"], [id*="lg-spin-"],
+
             [class*="chat"], [id*="chat"], [class*="proactive"], 
             .alk-container, #genesys-chat, .genesys-messenger,
             .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
@@ -229,27 +245,10 @@ def apply_clean_styles(page_obj):
             [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
             .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
             .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-            .open-button, .js-video-pause, .js-video-play,
-            [aria-label*="Pausar"], [aria-label*="video"],
+            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-            /* === LG Spin-to-Win Overlay === */
-            #lg-spin-root,
-            .lg-spin-root,
-            .lg-spin-modal,
-            .lg-spin-backdrop,
-            .lg-spin-wheel-wrap,
-            #lg-spin-canvas,
-            [id^="lg-spin"],
-            [class^="lg-spin"],
-            [class*=" lg-spin"],
-            .cmp-embed[id^="embed-"] {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
-
-            /* SPEED: Disable transitions */
+            /* SPEED: Disable transitions for instant navigation */
             *, *::before, *::after {
                 transition-duration: 0s !important;
                 animation-duration: 0s !important;
@@ -257,7 +256,7 @@ def apply_clean_styles(page_obj):
                 animation-delay: 0s !important;
             }
 
-            /* Sharpness Fixes */
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
@@ -268,44 +267,18 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        const hideSelectors = [
-            '.c-header', '.navigation',
-            '.iw_viewport-wrapper > header',
-            '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'
-        ];
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el =>
-                el.style.setProperty('display', 'none', 'important')
-            );
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
 
-        const opacitySelectors = [
-            '.cmp-carousel__indicators',
-            '.cmp-carousel__actions',
-            '.c-carousel-controls'
-        ];
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
         opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el =>
-                el.style.setProperty('opacity', '0', 'important')
-            );
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
 
-        /* Pause videos */
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
-
-        /* HARD REMOVE Spin-to-Win DOM */
-        (() => {
-            const spinSelectors = [
-                '#lg-spin-root',
-                '.lg-spin-root',
-                '.lg-spin-modal',
-                '.lg-spin-backdrop',
-                '.cmp-embed[id^="embed-"]'
-            ];
-            spinSelectors.forEach(sel => {
-                document.querySelectorAll(sel).forEach(el => el.remove());
-            });
-        })();
     """)
 
 
@@ -321,14 +294,7 @@ def find_hero_carousel(page, log_callback=None):
 
     log("🔍 Detecting hero carousel...")
 
-    excluded_wrappers = (
-        ".c-notification-banner, "
-        ".l-cookie-teaser, "
-        ".c-membership-popup, "
-        ".lg-spin-root, "
-        "#lg-spin-root, "
-        ".cmp-embed"
-    )
+    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser, .c-membership-popup"
 
     hero_selectors = [
         "main .cmp-carousel",
@@ -399,7 +365,7 @@ def find_hero_carousel(page, log_callback=None):
                     notification_keywords = [
                         'cookie', 'クッキー', 'プライバシー', 'privacy', 'notice',
                         'お知らせ', '利用規約', '特定商取引', 'オンラインショップ',
-                        'terms', 'conditions', '規約', '改正', 'spin', 'voucher'
+                        'terms', 'conditions', '規約', '改正'
                     ]
                     if any(keyword in carousel_text for keyword in notification_keywords):
                         log(f"   Carousel {idx}: SKIPPED (notification/legal content detected)")
@@ -495,7 +461,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         def block_chat_requests(route):
             url_str = route.request.url.lower()
             chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
-                             "proactive-chat", "spin", "spinner", "spin-to-win", "lg-spin", "spinner10.js"]
+                             "proactive-chat"]
             if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
@@ -507,11 +473,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             log(f"🌐 Navigating to {url}...")
             # SPEED FIX: Use domcontentloaded for faster start
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
-            page.evaluate("""
-    document.querySelectorAll('[style*="z-index: 2147483647"]').forEach(el => {
-        el.style.setProperty('display', 'none', 'important');
-    });
-""")
 
             try:
                 accept_btn = page.locator("#onetrust-accept-btn-handler")
