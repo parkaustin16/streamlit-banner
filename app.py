@@ -485,38 +485,69 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
         context.add_init_script("""
-(() => {
-  // 1️⃣ Kill the spinner singleton BEFORE it initializes
+        (() => {
   Object.defineProperty(window, "__LG_SPIN_SINGLETON__", {
     value: true,
     writable: false,
     configurable: false
   });
 
-  // 2️⃣ Prevent DOM injection (safety net)
-  const blockIds = [
-    "lg-spin-root",
-    "lg-spin-canvas",
-    "lg-spin-btn",
-    "lg-spin-result"
-  ];
+  const nativeSetTimeout = window.setTimeout;
+  const nativeSetInterval = window.setInterval;
+  const nativeRAF = window.requestAnimationFrame;
 
-  const observer = new MutationObserver((mutations) => {
-    for (const m of mutations) {
-      for (const node of m.addedNodes) {
-        if (node.nodeType === 1 && blockIds.includes(node.id)) {
-          node.remove();
-        }
-      }
+  function isSpinPayload(fn) {
+    try {
+      const s = fn && fn.toString();
+      return s && (
+        s.includes("lg-spin") ||
+        s.includes("Spin to Win") ||
+        s.includes("SPIN_DURATION_MS") ||
+        s.includes("bootstrapLikePopup")
+      );
+    } catch {
+      return false;
     }
-  });
+  }
 
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true
-  });
+  window.setTimeout = function (fn, delay, ...args) {
+    if (isSpinPayload(fn)) return 0;
+    return nativeSetTimeout(fn, delay, ...args);
+  };
+
+  window.setInterval = function (fn, delay, ...args) {
+    if (isSpinPayload(fn)) return 0;
+    return nativeSetInterval(fn, delay, ...args);
+  };
+
+  window.requestAnimationFrame = function (fn) {
+    if (isSpinPayload(fn)) return 0;
+    return nativeRAF(fn);
+  };
+
+  const SPIN_MATCH = /lg-spin|spin-to-win|spin_to_win/i;
+
+  function purge(node) {
+    if (!node || node.nodeType !== 1) return;
+    if (
+      (node.id && SPIN_MATCH.test(node.id)) ||
+      (node.className && SPIN_MATCH.test(node.className))
+    ) {
+      node.remove();
+    }
+  }
+
+  new MutationObserver(muts => {
+    muts.forEach(m =>
+      m.addedNodes.forEach(n => {
+        purge(n);
+        n.querySelectorAll && n.querySelectorAll("*").forEach(purge);
+      })
+    );
+  }).observe(document.documentElement, { childList: true, subtree: true });
 })();
 """)
+
         context.route("**/*spin*", lambda r: r.abort()) context.route("**/*ncms*", lambda r: r.abort())
         page = context.new_page()
         block_spin_to_win(page)
