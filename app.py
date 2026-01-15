@@ -215,59 +215,12 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and an Anti-Reversion Guard."""
+    """Comprehensive CSS cleanup with Sharpening and Speed fixes + LG Spin-to-Win suppression."""
     page_obj.evaluate("""
-        // 1. Function to aggressively hide and disable the wheel
-        const neutralizeWheel = () => {
-            const wheel = document.getElementById('lg-spin-root');
-            if (wheel) {
-                // Force hide via styles that beat inline JS
-                wheel.style.setProperty('display', 'none', 'important');
-                wheel.style.setProperty('visibility', 'hidden', 'important');
-                wheel.style.setProperty('opacity', '0', 'important');
-                wheel.style.setProperty('pointer-events', 'none', 'important');
-                
-                // Move it out of the viewport just in case
-                wheel.style.setProperty('position', 'absolute', 'important');
-                wheel.style.setProperty('top', '-10000px', 'important');
-            }
-        };
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
 
-        // 2. Set up a MutationObserver to block any attribute changes (like showing the wheel)
-        const attrObserver = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && (mutation.target.id === 'lg-spin-root' || mutation.target.classList.contains('lg-spin-root'))) {
-                    neutralizeWheel();
-                }
-                // If the element is deleted and re-added, catch it here
-                mutation.addedNodes.forEach(node => {
-                    if (node.id === 'lg-spin-root' || (node.classList && node.classList.contains('lg-spin-root'))) {
-                        neutralizeWheel();
-                    }
-                });
-            });
-        });
-
-        attrObserver.observe(document.documentElement, { 
-            attributes: true, 
-            childList: true, 
-            subtree: true, 
-            attributeFilter: ['style', 'class', 'aria-hidden'] 
-        });
-
-        // 3. Initial execution
-        neutralizeWheel();
-
-        // 4. Inject the Global CSS Reset
         const style = document.createElement('style');
         style.innerHTML = `
-            #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, .lg-spin-modal {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
-
             [class*="chat"], [id*="chat"], [class*="proactive"], 
             .alk-container, #genesys-chat, .genesys-messenger,
             .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
@@ -276,8 +229,25 @@ def apply_clean_styles(page_obj):
             [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
             .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
             .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
-            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+            .open-button, .js-video-pause, .js-video-play,
+            [aria-label*="Pausar"], [aria-label*="video"],
+
+            /* === LG Spin-to-Win Overlay === */
+            #lg-spin-root,
+            .lg-spin-root,
+            .lg-spin-modal,
+            .lg-spin-backdrop,
+            .lg-spin-wheel-wrap,
+            #lg-spin-canvas,
+            [id^="lg-spin"],
+            [class^="lg-spin"],
+            [class*=" lg-spin"],
+            .cmp-embed[id^="embed-"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
 
             /* SPEED: Disable transitions */
             *, *::before, *::after {
@@ -298,19 +268,46 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        // 5. Cleanup standard UI elements
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        const hideSelectors = [
+            '.c-header', '.navigation',
+            '.iw_viewport-wrapper > header',
+            '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'
+        ];
         hideSelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
+            document.querySelectorAll(s).forEach(el =>
+                el.style.setProperty('display', 'none', 'important')
+            );
         });
 
-        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
+        const opacitySelectors = [
+            '.cmp-carousel__indicators',
+            '.cmp-carousel__actions',
+            '.c-carousel-controls'
+        ];
         opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
+            document.querySelectorAll(s).forEach(el =>
+                el.style.setProperty('opacity', '0', 'important')
+            );
         });
 
+        /* Pause videos */
         document.querySelectorAll('video').forEach(v => v.pause());
+
+        /* HARD REMOVE Spin-to-Win DOM */
+        (() => {
+            const spinSelectors = [
+                '#lg-spin-root',
+                '.lg-spin-root',
+                '.lg-spin-modal',
+                '.lg-spin-backdrop',
+                '.cmp-embed[id^="embed-"]'
+            ];
+            spinSelectors.forEach(sel => {
+                document.querySelectorAll(sel).forEach(el => el.remove());
+            });
+        })();
     """)
+
 
 def find_hero_carousel(page, log_callback=None):
     """
@@ -324,7 +321,14 @@ def find_hero_carousel(page, log_callback=None):
 
     log("🔍 Detecting hero carousel...")
 
-    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser, .c-membership-popup"
+    excluded_wrappers = (
+        ".c-notification-banner, "
+        ".l-cookie-teaser, "
+        ".c-membership-popup, "
+        ".lg-spin-root, "
+        "#lg-spin-root, "
+        ".cmp-embed"
+    )
 
     hero_selectors = [
         "main .cmp-carousel",
@@ -395,7 +399,7 @@ def find_hero_carousel(page, log_callback=None):
                     notification_keywords = [
                         'cookie', 'クッキー', 'プライバシー', 'privacy', 'notice',
                         'お知らせ', '利用規約', '特定商取引', 'オンラインショップ',
-                        'terms', 'conditions', '規約', '改正'
+                        'terms', 'conditions', '規約', '改正', 'spin', 'voucher'
                     ]
                     if any(keyword in carousel_text for keyword in notification_keywords):
                         log(f"   Carousel {idx}: SKIPPED (notification/legal content detected)")
@@ -491,7 +495,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         def block_chat_requests(route):
             url_str = route.request.url.lower()
             chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
-                             "proactive-chat"]
+                             "proactive-chat", "spin", "spinner", "spin-to-win", "lg-spin", "spinner10.js"]
             if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
@@ -503,6 +507,11 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             log(f"🌐 Navigating to {url}...")
             # SPEED FIX: Use domcontentloaded for faster start
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
+            page.evaluate("""
+    document.querySelectorAll('[style*="z-index: 2147483647"]').forEach(el => {
+        el.style.setProperty('display', 'none', 'important');
+    });
+""")
 
             try:
                 accept_btn = page.locator("#onetrust-accept-btn-handler")
@@ -558,12 +567,10 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     """, i)
 
                     # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
-                    time.sleep(0.5)
-                    apply_clean_styles(page)
-                    time.sleep(0.5)
+                    time.sleep(1.0)
 
                     # 3. Apply styles for clean capture
-                    
+                    apply_clean_styles(page)
 
                     # 4. Detect "Current Slide Signature" to verify uniqueness
                     signature_data = page.evaluate(f"""
