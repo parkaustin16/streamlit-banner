@@ -215,77 +215,80 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Dynamic Popup removal."""
+    """Comprehensive CSS cleanup with Iframe-specific popup removal."""
     page_obj.evaluate("""
-        // 1. Immediate removal of existing banners
-        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
-
-        // 2. Global CSS Injection
+        // 1. CSS Injection: Targets both the div root AND potential iframes
         const style = document.createElement('style');
         style.innerHTML = `
-            /* Hiding popups, chats, and the Spin-to-Win overlay */
+            /* Hide the root and any iframe that might contain the spin wheel */
+            #lg-spin-root, 
+            .lg-spin-root,
+            iframe[src*="spin"], 
+            iframe[id*="lg-spin"],
+            [class*="lg-spin"] {
+                display: none !important;
+                visibility: hidden !important;
+                opacity: 0 !important;
+                pointer-events: none !important;
+            }
+
+            /* Restore scrolling in case the iframe locks the body */
+            html, body {
+                overflow: auto !important;
+                height: auto !important;
+            }
+
+            /* Existing cleanup selectors */
             [class*="chat"], [id*="chat"], [class*="proactive"], 
             .alk-container, #genesys-chat, .genesys-messenger,
             .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
             .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            .c-membership-popup, 
-            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+            .c-membership-popup, [class*="cloud-shoplive"], [class*="csl-"], 
             .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-            .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
-            #lg-spin-root, [class^="lg-spin-"]
-            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+            .open-button, .js-video-pause, .js-video-play
+            { display: none !important; visibility: hidden !important; }
 
-            /* SPEED: Disable transitions for instant navigation */
+            /* SPEED & SHARPNESS */
             *, *::before, *::after {
                 transition-duration: 0s !important;
                 animation-duration: 0s !important;
-                transition-delay: 0s !important;
-                animation-delay: 0s !important;
             }
-
-            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
-            .cmp-carousel__item, .c-hero-banner, img {
+            img, .c-hero-banner {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
-                transform: translateZ(0) !important;
-                backface-visibility: hidden !important;
-                perspective: 1000 !important;
             }
         `;
         document.head.appendChild(style);
 
-        // 3. Static cleanup for elements already present
-        const hideSelectors = [
-            '.c-header', '.navigation', '.iw_viewport-wrapper > header', 
-            '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn', '#lg-spin-root'
-        ];
+        // 2. Persistent Iframe & Class Stripper
+        const cleanup = () => {
+            // Find any iframe containing "lg-spin" or "spin" in ID, Class, or Src
+            const frames = document.querySelectorAll('iframe');
+            frames.forEach(frame => {
+                if (frame.id.includes('lg-spin') || frame.src.includes('spin') || frame.className.includes('lg-spin')) {
+                    frame.remove();
+                }
+            });
+
+            // Also remove the div root if it exists outside an iframe
+            const spinRoot = document.getElementById('lg-spin-root') || document.querySelector('.lg-spin-root');
+            if (spinRoot) spinRoot.remove();
+
+            // Strip scroll-locking classes from body/html
+            document.body.classList.remove('is-open', 'modal-open', 'no-scroll');
+            document.documentElement.classList.remove('is-open', 'modal-open', 'no-scroll');
+        };
+
+        // Run every 500ms for 15 seconds to catch the 6s delayed iframe injection
+        const intervalId = setInterval(cleanup, 500);
+        setTimeout(() => clearInterval(intervalId), 15000);
+
+        // 3. Static cleanup
+        const hideSelectors = ['.c-header', '.navigation', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
 
-        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
-        opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
-        });
-
-        // 4. Dynamic Watcher: Removes the "Spin to Win" popup if it appears later (e.g., after 6s)
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.id === 'lg-spin-root' || (node.classList && node.classList.contains('lg-spin-root'))) {
-                        node.remove();
-                        // Also restore scrolling if the popup locked it
-                        document.body.style.overflow = 'auto';
-                        document.documentElement.style.overflow = 'auto';
-                    }
-                });
-            });
-        });
-
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
