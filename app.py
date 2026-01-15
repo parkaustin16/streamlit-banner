@@ -215,83 +215,70 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """
-    Comprehensive CSS cleanup with MutationObserver.
-    Ensures 'LG Spin to Win' and other popups stay hidden even if dynamically injected.
-    """
+    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Persistent Spin-Wheel Removal."""
     page_obj.evaluate("""
-        // 1. Setup persistent suppression style
-        const styleId = 'clean-styles-injection';
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.innerHTML = `
-                /* Hide LG Spinner and common popups */
-                #lg-spin-root, .lg-spin-backdrop, .lg-spin-modal, .lg-spin-wheel-wrap,
-                [id*="lg-spin"], [class*="lg-spin"], 
-                [class*="chat"], [id*="chat"], [class*="proactive"], 
-                .alk-container, #genesys-chat, .genesys-messenger,
-                .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-                .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-                .c-membership-popup, 
-                [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-                .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-                .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-                .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
-                { 
-                    display: none !important; 
-                    visibility: hidden !important; 
-                    opacity: 0 !important; 
-                    pointer-events: none !important;
-                    z-index: -1 !important;
-                }
+        // 1. Immediate Removal of known elements
+        document.querySelectorAll('.c-notification-banner, #lg-spin-root, .lg-spin-root').forEach(el => el.remove());
 
-                /* Disable transitions to prevent motion blur */
-                *, *::before, *::after {
-                    transition-duration: 0s !important;
-                    animation-duration: 0s !important;
-                    transition-delay: 0s !important;
-                    animation-delay: 0s !important;
-                }
+        // 2. Inject CSS to hide elements (Safety Net)
+        const style = document.createElement('style');
+        style.innerHTML = `
+            [class*="chat"], [id*="chat"], [class*="proactive"], 
+            .alk-container, #genesys-chat, .genesys-messenger,
+            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+            .c-membership-popup, 
+            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+            .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
+            #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, .lg-spin-modal
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-                /* Sharpness Fixes */
-                .cmp-carousel__item, .c-hero-banner, img {
-                    image-rendering: -webkit-optimize-contrast !important;
-                    image-rendering: crisp-edges !important;
-                    transform: translateZ(0) !important;
-                    backface-visibility: hidden !important;
-                }
-            `;
-            document.head.appendChild(style);
-        }
+            /* SPEED: Disable transitions for instant navigation */
+            *, *::before, *::after {
+                transition-duration: 0s !important;
+                animation-duration: 0s !important;
+                transition-delay: 0s !important;
+                animation-delay: 0s !important;
+            }
 
-        // 2. Immediate & Recursive removal function
-        const purgePopups = () => {
-            // Remove the LG Spin root completely from DOM
-            const spinner = document.getElementById('lg-spin-root');
-            if (spinner) spinner.remove();
+            /* Sharpness Fixes */
+            .cmp-carousel__item, .c-hero-banner, img {
+                image-rendering: -webkit-optimize-contrast !important;
+                image-rendering: crisp-edges !important;
+                transform: translateZ(0) !important;
+                backface-visibility: hidden !important;
+                perspective: 1000 !important;
+            }
+        `;
+        document.head.appendChild(style);
 
-            // Hide headers and navigation that might overlap banners
-            const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn'];
-            hideSelectors.forEach(s => {
-                document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
+        // 3. Persistent Guard: MutationObserver to catch late-loading scripts
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.id === 'lg-spin-root' || (node.classList && node.classList.contains('lg-spin-root'))) {
+                        node.remove();
+                    }
+                });
             });
-            
-            // Ensure videos are paused
-            document.querySelectorAll('video').forEach(v => v.pause());
-        };
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
 
-        // 3. The Guard: Watch for new elements being added (like the Spinner)
-        if (!window._popupObserver) {
-            window._popupObserver = new MutationObserver(() => purgePopups());
-            window._popupObserver.observe(document.body, {
-                childList: true,
-                subtree: true
-            });
-        }
+        // 4. Hide Static Elements
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        hideSelectors.forEach(s => {
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
+        });
 
-        // Run once immediately
-        purgePopups();
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
+        opacitySelectors.forEach(s => {
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
+        });
+
+        // 5. Pause videos immediately
+        document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
 
