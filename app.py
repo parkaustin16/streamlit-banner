@@ -135,6 +135,7 @@ def upload_to_cloudinary(file_path, country_code, mode, slide_num):
                     'public_id': public_id
                 }
 
+                # Use verify=False to match the established SSL bypass strategy
                 response = requests.post(url, files=files, data=data, verify=False)
                 response.raise_for_status()
                 result = response.json()
@@ -215,93 +216,57 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Aggressive logic to remove all variations of the Spin Wheel and other overlays."""
+    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
-        const removeOverlays = () => {
-            // 1. Identify all possible wheel/spin/fortune/pop-up selectors
-            const badSelectors = [
-                '#lg-spin-root', '.lg-spin-root', '.lg-spin-backdrop', '.lg-spin-modal',
-                '[aria-label="Spin to Win"]', '[class*="spin-wheel"]', '[id*="spin-wheel"]',
-                '.lg-fortune-root', '#lg-fortune-root', '.lg-fortune-modal',
-                '.lg-spin-container', '.lg-spin-wrap', '.c-pop-toast', 
-                '.c-notification-banner', '.onetrust-pc-dark-filter', '#onetrust-consent-sdk',
-                '.c-membership-popup', '.l-cookie-teaser', '.c-cookie-settings'
-            ];
-
-            // 2. Direct DOM Removal
-            badSelectors.forEach(selector => {
-                document.querySelectorAll(selector).forEach(el => {
-                    el.remove();
-                });
-            });
-
-            // 3. Shadow DOM Deep Scan (The wheel is often hidden here)
-            const allElements = document.querySelectorAll('*');
-            allElements.forEach(el => {
-                if (el.shadowRoot) {
-                    badSelectors.forEach(selector => {
-                        el.shadowRoot.querySelectorAll(selector).forEach(innerEl => innerEl.remove());
-                    });
-                }
-            });
-
-            // 4. MutationObserver to catch items injected later
-            const observer = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === 1) { // Element node
-                            badSelectors.forEach(selector => {
-                                if (node.matches && node.matches(selector)) node.remove();
-                                if (node.querySelectorAll) {
-                                    node.querySelectorAll(selector).forEach(inner => inner.remove());
-                                }
-                            });
-                        }
-                    });
-                });
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-
-            // 5. Force Body Scroll & Remove "Modal Open" classes that dim the screen
-            document.body.classList.remove('pdp-popup-open', 'modal-open', 'no-scroll');
-            document.documentElement.classList.remove('no-scroll');
-            document.body.style.overflow = 'auto';
-        };
-
-        // Run immediately
-        removeOverlays();
-        
-        // Add persistent Global CSS to hide them if they try to reappear
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
-            #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, .lg-spin-modal,
-            [aria-label="Spin to Win"], [class*="spin-wheel"], [id*="spin-wheel"],
-            .lg-fortune-root, #lg-fortune-root, .lg-fortune-modal,
-            [class*="chat"], [id*="chat"], .alk-container, #genesys-chat, 
-            .c-notification-banner, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            .c-membership-popup, .l-cookie-teaser, .js-video-pause, .js-video-play
+            [class*="chat"], [id*="chat"], [class*="proactive"], 
+        .alk-container, #genesys-chat, .genesys-messenger,
+        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        .c-membership-popup, 
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
+        
+        /* SPINNER REMOVAL: Remove loading indicators and spinners */
+        .cmp-carousel__loading, .c-loading, .c-loader, .loading, .spinner, 
+        [class*="spinner"], [class*="loading-state"], [id*="loading"], 
+        .c-hero-banner--loading, .is-loading
             { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-            /* SPEED & SHARPNESS */
+            /* SPEED: Disable transitions for instant navigation */
             *, *::before, *::after {
                 transition-duration: 0s !important;
                 animation-duration: 0s !important;
+                transition-delay: 0s !important;
+                animation-delay: 0s !important;
             }
+
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
                 transform: translateZ(0) !important;
+                backface-visibility: hidden !important;
+                perspective: 1000 !important;
             }
         `;
         document.head.appendChild(style);
 
-        // Hide Headers & Navigation specifically
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn'];
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
 
-        // Pause all videos
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
+        opacitySelectors.forEach(s => {
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
+        });
+
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
@@ -554,7 +519,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
 
-                    # 3. Apply styles for clean capture (Crucial: This is the anti-wheel cleanup)
+                    # 3. Apply styles for clean capture
                     apply_clean_styles(page)
 
                     # 4. Detect "Current Slide Signature" to verify uniqueness
