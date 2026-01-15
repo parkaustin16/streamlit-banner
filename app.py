@@ -218,6 +218,26 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 def apply_clean_styles(page_obj):
     """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
+        // Force removal of known loaders by selector and keyword
+        const nukeLoaders = () => {
+            document.querySelectorAll('.c-loader, .c-loading, .cmp-carousel__loading, .loading, .spinner, .c-indicator, [class*="loading"], [class*="spinner"]').forEach(el => {
+                el.remove();
+            });
+            
+            // Check for elements with 'spinner' in ID or class names that aren't caught by simple selectors
+            const allElements = document.getElementsByTagName("*");
+            for (let i = 0; i < allElements.length; i++) {
+                const el = allElements[i];
+                if (el.className && typeof el.className === 'string' && (el.className.toLowerCase().includes('spinner') || el.className.toLowerCase().includes('loading'))) {
+                    el.style.setProperty('display', 'none', 'important');
+                    el.style.setProperty('visibility', 'hidden', 'important');
+                    el.style.setProperty('opacity', '0', 'important');
+                }
+            }
+        };
+
+        nukeLoaders();
+        
         document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
@@ -231,11 +251,17 @@ def apply_clean_styles(page_obj):
         .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
         .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
         
-        /* SPINNER REMOVAL: Remove loading indicators and spinners */
+        /* AGGRESSIVE SPINNER REMOVAL: Force hide any remaining UI elements that act as loaders */
         .cmp-carousel__loading, .c-loading, .c-loader, .loading, .spinner, 
         [class*="spinner"], [class*="loading-state"], [id*="loading"], 
-        .c-hero-banner--loading, .is-loading
+        .c-hero-banner--loading, .is-loading, .c-indicator--loading
             { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+
+            /* Ensure banner opacity is 1 even if the site thinks it is still loading */
+            .cmp-carousel__item, .c-hero-banner, .swiper-slide {
+                opacity: 1 !important;
+                visibility: visible !important;
+            }
 
             /* SPEED: Disable transitions for instant navigation */
             *, *::before, *::after {
@@ -519,7 +545,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
 
-                    # 3. Apply styles for clean capture
+                    # 3. Apply styles for clean capture (Run twice to catch dynamic content)
                     apply_clean_styles(page)
 
                     # 4. Detect "Current Slide Signature" to verify uniqueness
