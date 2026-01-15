@@ -215,12 +215,33 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Persistent Spin-Wheel Removal."""
+    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
-        // 1. Immediate Removal of known elements
-        document.querySelectorAll('.c-notification-banner, #lg-spin-root, .lg-spin-root').forEach(el => el.remove());
+        // Remove notification banners immediately
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
+        
+        // Setup persistent removal for late-appearing spin wheel elements
+        const removeSpinWheel = () => {
+            const selectors = ['#lg-spin-root', '.lg-spin-root', '.lg-spin-backdrop', '.lg-spin-modal', '[id*="lg-spin"]'];
+            selectors.forEach(selector => {
+                document.querySelectorAll(selector).forEach(el => el.remove());
+            });
+        };
 
-        // 2. Inject CSS to hide elements (Safety Net)
+        // 1. Initial removal
+        removeSpinWheel();
+
+        // 2. MutationObserver to catch it the moment it is injected
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach(() => removeSpinWheel());
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        // 3. Persistent Interval (Heartbeat) to catch late-session triggers
+        if (!window.spinCleanerInterval) {
+            window.spinCleanerInterval = setInterval(removeSpinWheel, 500);
+        }
+
         const style = document.createElement('style');
         style.innerHTML = `
             [class*="chat"], [id*="chat"], [class*="proactive"], 
@@ -243,7 +264,7 @@ def apply_clean_styles(page_obj):
                 animation-delay: 0s !important;
             }
 
-            /* Sharpness Fixes */
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
@@ -254,19 +275,6 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        // 3. Persistent Guard: MutationObserver to catch late-loading scripts
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.id === 'lg-spin-root' || (node.classList && node.classList.contains('lg-spin-root'))) {
-                        node.remove();
-                    }
-                });
-            });
-        });
-        observer.observe(document.body, { childList: true, subtree: true });
-
-        // 4. Hide Static Elements
         const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
@@ -277,7 +285,7 @@ def apply_clean_styles(page_obj):
             document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
 
-        // 5. Pause videos immediately
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
