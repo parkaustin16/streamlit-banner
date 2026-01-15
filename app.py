@@ -220,15 +220,17 @@ def apply_clean_styles(page_obj):
         document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
+            /* Hiding popups, chats, and the Spin-to-Win overlay */
             [class*="chat"], [id*="chat"], [class*="proactive"], 
-        .alk-container, #genesys-chat, .genesys-messenger,
-        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-        .c-membership-popup, 
-        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            .alk-container, #genesys-chat, .genesys-messenger,
+            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+            .c-membership-popup, 
+            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+            .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
+            #lg-spin-root, [class^="lg-spin-"]
             { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
             /* SPEED: Disable transitions for instant navigation */
@@ -250,7 +252,14 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        const hideSelectors = [
+            '.c-header', 
+            '.navigation', 
+            '.iw_viewport-wrapper > header', 
+            '.al-quick-btn__quickbtn', 
+            '.al-quick-btn__topbtn',
+            '#lg-spin-root'
+        ];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
@@ -263,7 +272,6 @@ def apply_clean_styles(page_obj):
         // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
-
 
 def find_hero_carousel(page, log_callback=None):
     """
