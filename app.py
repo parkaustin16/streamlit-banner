@@ -226,6 +226,10 @@ def apply_clean_styles(page_obj):
         .lg-spin-title, .lg-spin-subtitle, .lg-spin-result, .lg-spin-result *,
         .lg-spin-btn, .lg-spin-close, .lg-spin-x, [data-lg-spin-close],
         [class*="chat"], [id*="chat"], [class*="proactive"],
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
         [style*="z-index: 2147483647"], [style*="z-index:2147483647"],
         [style*="display: block"], [style*="visibility: visible"], 
         .is-open, [aria-hidden="false"], [aria-label*="Spin"],
@@ -241,6 +245,8 @@ def apply_clean_styles(page_obj):
                 left: -9999px !important;
                 height: 0px !important;
                 width: 0px !important;
+                max-height: 0px !important;
+                max-width: 0px !important;
                 overflow: hidden !important;
                 transform: scale(0) !important;
             },
