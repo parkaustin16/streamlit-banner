@@ -485,6 +485,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
+        context.route("**/*spin*", lambda r: r.abort()) context.route("**/*ncms*", lambda r: r.abort())
         block_spin_to_win(page)
         
         def block_chat_requests(route):
