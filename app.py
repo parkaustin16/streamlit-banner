@@ -490,13 +490,35 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         def block_chat_requests(route):
             url_str = route.request.url.lower()
             chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
-                             "proactive-chat", "spinner", "spin-to-win", "lg-spin"]  # Added spinner keywords
+                             "proactive-chat", "spinner", "spin-to-win", "lg-spin", "spinner-rtl", "spinner10"]
             if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
                 route.continue_()
 
         page.route("**/*", block_chat_requests)
+
+        # INJECT CONTINUOUS CLEANUP SCRIPT BEFORE NAVIGATION
+        page.add_init_script("""
+            // This runs on every page load and frame
+            (function() {
+                function nukeSpinToWin() {
+                    document.querySelectorAll('.cmp-embed, [class*="cmp-embed"], #lg-spin-root, [id*="lg-spin"], [class*="lg-spin"], [id*="embed-"]').forEach(el => {
+                        el.remove();
+                    });
+                }
+                
+                // Run immediately
+                nukeSpinToWin();
+                
+                // Run continuously every 100ms
+                setInterval(nukeSpinToWin, 100);
+                
+                // Also watch for DOM changes
+                const observer = new MutationObserver(nukeSpinToWin);
+                observer.observe(document.documentElement, { childList: true, subtree: true });
+            })();
+        """)
 
         try:
             log(f"🌐 Navigating to {url}...")
@@ -533,7 +555,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 success = False
 
                 # ATTEMPT LOOP: Handles mobile snapping/duplicates
-                for attempt in range(4):  # Increased to 4 attempts for tricky sites
+                for attempt in range(4):
                     log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
                     # 1. Force the swiper state & stop autoplay via JS
@@ -556,10 +578,10 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         }}
                     """, i)
 
-                    # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
+                    # 2. Hard wait for visual stability
                     time.sleep(1.0)
 
-                    # 3. Apply styles for clean capture - NOW CALLED EVERY ITERATION
+                    # 3. Apply styles for clean capture
                     apply_clean_styles(page)
 
                     # 4. Detect "Current Slide Signature" to verify uniqueness
@@ -624,11 +646,12 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         # Shortened wait for settling
                         time.sleep(0.2)
                         
-                        # ONE MORE CLEANUP RIGHT BEFORE SCREENSHOT
-                        apply_clean_styles(page)
+                        # ONE MORE MANUAL NUKE RIGHT BEFORE SCREENSHOT
+                        page.evaluate("""
+                            document.querySelectorAll('.cmp-embed, [class*="cmp-embed"], #lg-spin-root, [id*="lg-spin"], [class*="lg-spin"], [id*="embed-"]').forEach(el => el.remove());
+                        """)
 
                         # Use scale='device' for the screenshot to respect our DPR 2.0
-                        # SPEED FIX: Save as JPEG to reduce file size and encoding time
                         element.screenshot(path=filepath, scale="device", type="jpeg", quality=95)
                         captured_signatures.append(current_sig)
                         log(f"✅ Captured: {filename}")
