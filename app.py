@@ -418,7 +418,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         if log_callback:
             log_callback(message)
 
-    # Resolution Boost: We set a high device_pixel_ratio to avoid blurriness
     size: ViewportSize = {'width': 1920, 'height': 720} if mode == 'desktop' else {'width': 360, 'height': 480}
 
     session_folder_name = f"{country_code}_{mode}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -437,7 +436,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             ]
         )
 
-        # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
 
@@ -454,7 +452,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
         try:
             log(f"🌐 Navigating to {url}...")
-            # SPEED FIX: Use domcontentloaded for faster start
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
 
             try:
@@ -462,7 +459,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 if accept_btn.is_visible(timeout=5000):
                     log("🍪 Accepting cookies...")
                     accept_btn.click()
-                    # Shortened wait after cookie acceptance
                     time.sleep(0.5)
             except:
                 pass
@@ -479,24 +475,20 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             num_slides = len(indicators)
             log(f"📸 Found {num_slides} indicators in carousel.")
 
-            # TRACKER: To prevent capturing the same banner twice
             captured_signatures = []
 
             for i in range(num_slides):
                 slide_num = i + 1
                 success = False
 
-                # ATTEMPT LOOP: Handles mobile snapping/duplicates
-                for attempt in range(4):  # Increased to 4 attempts for tricky sites
+                for attempt in range(4):
                     log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
-                    # 1. Force the swiper state & stop autoplay via JS
                     page.evaluate(f"""
                         (idx) => {{
                             const car = document.querySelector('.cmp-carousel');
                             if (car && car.swiper) {{
                                 car.swiper.autoplay.stop();
-                                // Force zero speed for instant jump to avoid animation blur
                                 car.swiper.params.speed = 0;
                                 if (typeof car.swiper.slideToLoop === 'function') {{
                                     car.swiper.slideToLoop(idx);
@@ -510,13 +502,9 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         }}
                     """, i)
 
-                    # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
-
-                    # 3. Apply styles for clean capture
                     apply_clean_styles(page)
 
-                    # 4. Detect "Current Slide Signature" to verify uniqueness
                     signature_data = page.evaluate(f"""
                         (targetIdx) => {{
                             const active = document.querySelector(`.swiper-slide-active[data-swiper-slide-index="${{targetIdx}}"]`) 
@@ -527,8 +515,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                             const img = active.querySelector('img');
                             const text = active.innerText.trim().substring(0, 80);
                             const currentIdx = active.getAttribute('data-swiper-slide-index');
-
-                            // FORCE A REFLOW to fix sub-pixel blur before return
                             active.offsetHeight; 
 
                             return {{
@@ -551,14 +537,12 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         time.sleep(0.5)
                         continue
 
-                    # 5. Capture Logic
                     active_slide_selector = f".cmp-carousel__item.swiper-slide-active[data-swiper-slide-index='{i}']"
                     try:
                         page.wait_for_selector(active_slide_selector, timeout=2000)
                     except:
                         active_slide_selector = ".cmp-carousel__item.swiper-slide-active"
 
-                    # SPEED FIX: Use JPEG instead of PNG for faster processing
                     filename = f"{country_code}_{mode}_hero_{slide_num}.jpg"
                     filepath = os.path.join(session_path, filename)
 
@@ -575,26 +559,37 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
                     if element:
                         element.scroll_into_view_if_needed()
-                        # Shortened wait for settling
                         time.sleep(0.2)
 
-                        # Use scale='device' for the screenshot to respect our DPR 2.0
-                        # SPEED FIX: Save as JPEG to reduce file size and encoding time
-                        element.screenshot(path=filepath, scale="device", type="jpeg", quality=95)
-                        captured_signatures.append(current_sig)
-                        log(f"✅ Captured: {filename}")
+                        # GET BOUNDING BOX
+                        bbox = element.bounding_box()
+                        
+                        if bbox:
+                            # USE PAGE.SCREENSHOT WITH CLIP - This captures UNDER overlays!
+                            page.screenshot(
+                                path=filepath,
+                                type="jpeg",
+                                quality=95,
+                                clip={
+                                    'x': bbox['x'],
+                                    'y': bbox['y'],
+                                    'width': bbox['width'],
+                                    'height': bbox['height']
+                                }
+                            )
+                            
+                            captured_signatures.append(current_sig)
+                            log(f"✅ Captured: {filename}")
 
-                        cloudinary_url = None
-                        cloudinary_id = None
+                            cloudinary_url = None
 
-                        if upload_to_cloud:
-                            log(f"☁️ Uploading to Cloud...")
-                            cloudinary_url, cloudinary_id = upload_to_cloudinary(filepath, country_code, mode,
-                                                                                 slide_num)
+                            if upload_to_cloud:
+                                log(f"☁️ Uploading to Cloud...")
+                                cloudinary_url, _ = upload_to_cloudinary(filepath, country_code, mode, slide_num)
 
-                        yield filepath, slide_num, cloudinary_url
-                        success = True
-                        break
+                            yield filepath, slide_num, cloudinary_url
+                            success = True
+                            break
 
                 if not success:
                     log(f"   ❌ Failed to capture unique version of slide {slide_num} after 4 attempts")
