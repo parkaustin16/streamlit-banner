@@ -215,53 +215,75 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
+    """
+    Nuclear cleanup: Targets the Spin-to-Win wrapper specifically using 
+    CSS injection, MutationObservers, and explicit removal.
+    """
     page_obj.evaluate("""
-        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
+        // 1. Injected CSS with !important rules to override inline styles
         const style = document.createElement('style');
         style.innerHTML = `
-            [class*="chat"], [id*="chat"], [class*="proactive"], 
-        .alk-container, #genesys-chat, .genesys-messenger,
-        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-        .c-membership-popup, 
-        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
-            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
-
-            /* SPEED: Disable transitions for instant navigation */
-            *, *::before, *::after {
-                transition-duration: 0s !important;
-                animation-duration: 0s !important;
-                transition-delay: 0s !important;
-                animation-delay: 0s !important;
+            /* Target the specific IDs and classes from your HTML */
+            #lg-spin-root, 
+            .lg-spin-root, 
+            [id*="lg-spin"], 
+            .lg-spin-backdrop, 
+            .lg-spin-modal,
+            .cmp-embed:has(#lg-spin-root),
+            .c-membership-popup, 
+            #onetrust-consent-sdk, 
+            .onetrust-pc-dark-filter,
+            [class*="chat"], 
+            [id*="chat"], 
+            .genesys-messenger
+            { 
+                display: none !important; 
+                visibility: hidden !important; 
+                opacity: 0 !important; 
+                pointer-events: none !important; 
+                z-index: -1 !important; 
+                height: 0 !important;
+                width: 0 !important;
+                position: absolute !important;
+                left: -9999px !important;
             }
+            
+            /* Hide the container of the embed if it contains the spin root */
+            .cmp-embed:has(.lg-spin-root) { display: none !important; }
 
-            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
-            .cmp-carousel__item, .c-hero-banner, img {
-                image-rendering: -webkit-optimize-contrast !important;
+            /* Image Sharpness and Performance */
+            .cmp-carousel__item, img { 
+                image-rendering: -webkit-optimize-contrast !important; 
                 image-rendering: crisp-edges !important;
-                transform: translateZ(0) !important;
-                backface-visibility: hidden !important;
-                perspective: 1000 !important;
             }
         `;
         document.head.appendChild(style);
 
-        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        // 2. Immediate removal of existing nodes from the DOM
+        const nuke = () => {
+            const targets = document.querySelectorAll('#lg-spin-root, .lg-spin-root, .c-membership-popup, .lg-spin-backdrop');
+            targets.forEach(el => {
+                // If it has a parent that is just an empty embed wrapper, remove that too
+                const parent = el.closest('.cmp-embed');
+                if (parent) parent.remove();
+                el.remove();
+            });
+        };
+        nuke();
+
+        // 3. Mutation Observer: Watches for the script re-adding the element dynamically
+        if (!window.nukeObserver) {
+            window.nukeObserver = new MutationObserver((mutations) => {
+                nuke();
+            });
+            window.nukeObserver.observe(document.body, { childList: true, subtree: true });
+        }
+        
+        // 4. Hide Headers and Global Controls
+        const hideSelectors = ['.c-header', '.navigation', '.cmp-carousel__indicators', '.cmp-carousel__actions', '.al-quick-btn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
-
-        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
-        opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
-        });
-
-        // Pause videos immediately to prevent motion blur
-        document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
 
