@@ -503,6 +503,25 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     """, i)
 
                     time.sleep(1.0)
+                    
+                    # PUSH MODAL BEHIND EVERYTHING
+                    page.evaluate("""
+                        const modal = document.querySelector('#lg-spin-root');
+                        if (modal) {
+                            // Set z-index to negative to push behind page content
+                            modal.style.setProperty('z-index', '-999999', 'important');
+                            modal.style.setProperty('position', 'fixed', 'important');
+                            modal.style.setProperty('pointer-events', 'none', 'important');
+                        }
+                        
+                        // Also hide backdrop and modal content
+                        document.querySelectorAll('.lg-spin-backdrop, .lg-spin-modal').forEach(el => {
+                            el.style.setProperty('z-index', '-999999', 'important');
+                            el.style.setProperty('opacity', '0', 'important');
+                            el.style.setProperty('pointer-events', 'none', 'important');
+                        });
+                    """)
+                    
                     apply_clean_styles(page)
 
                     signature_data = page.evaluate(f"""
@@ -560,36 +579,28 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     if element:
                         element.scroll_into_view_if_needed()
                         time.sleep(0.2)
-
-                        # GET BOUNDING BOX
-                        bbox = element.bounding_box()
                         
-                        if bbox:
-                            # USE PAGE.SCREENSHOT WITH CLIP - This captures UNDER overlays!
-                            page.screenshot(
-                                path=filepath,
-                                type="jpeg",
-                                quality=95,
-                                clip={
-                                    'x': bbox['x'],
-                                    'y': bbox['y'],
-                                    'width': bbox['width'],
-                                    'height': bbox['height']
-                                }
-                            )
-                            
-                            captured_signatures.append(current_sig)
-                            log(f"✅ Captured: {filename}")
+                        # ONE MORE PUSH BEFORE SCREENSHOT
+                        page.evaluate("""
+                            document.querySelectorAll('#lg-spin-root, .lg-spin-backdrop, .lg-spin-modal, [id*="lg-spin"], [class*="lg-spin"]').forEach(el => {
+                                el.style.setProperty('z-index', '-999999', 'important');
+                                el.style.setProperty('opacity', '0', 'important');
+                            });
+                        """)
 
-                            cloudinary_url = None
+                        element.screenshot(path=filepath, scale="device", type="jpeg", quality=95)
+                        captured_signatures.append(current_sig)
+                        log(f"✅ Captured: {filename}")
 
-                            if upload_to_cloud:
-                                log(f"☁️ Uploading to Cloud...")
-                                cloudinary_url, _ = upload_to_cloudinary(filepath, country_code, mode, slide_num)
+                        cloudinary_url = None
 
-                            yield filepath, slide_num, cloudinary_url
-                            success = True
-                            break
+                        if upload_to_cloud:
+                            log(f"☁️ Uploading to Cloud...")
+                            cloudinary_url, _ = upload_to_cloudinary(filepath, country_code, mode, slide_num)
+
+                        yield filepath, slide_num, cloudinary_url
+                        success = True
+                        break
 
                 if not success:
                     log(f"   ❌ Failed to capture unique version of slide {slide_num} after 4 attempts")
@@ -599,7 +610,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         finally:
             log("🔒 Closing browser.")
             browser.close()
-
 
 # --- STREAMLIT UI ---
 
