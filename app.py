@@ -215,89 +215,87 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Iframe-specific popup removal and stylesheet blocking."""
+    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Spinner Killer."""
     page_obj.evaluate("""
-        // 1. CSS Injection: Force hide any visual element related to spinners
-        const style = document.createElement('style');
-        style.innerHTML = `
-            #lg-spin-root, 
-            .lg-spin-root,
-            [class*="spinner"],
-            [id*="spinner"],
-            iframe[src*="spin"], 
-            iframe[id*="lg-spin"],
-            [class*="lg-spin"] {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
+        // 1. Force hide via injected global styles
+        if (!document.getElementById('capture-cleanup-style')) {
+            const style = document.createElement('style');
+            style.id = 'capture-cleanup-style';
+            style.innerHTML = `
+                [class*="chat"], [id*="chat"], [class*="proactive"], 
+                .alk-container, #genesys-chat, .genesys-messenger,
+                .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+                .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+                .c-membership-popup, 
+                [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+                .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+                .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+                .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
+                #lg-spin-root, .lg-spin-root, [class*="spinner"], [id*="spinner"],
+                iframe[src*="spin"], iframe[id*="lg-spin"], [class*="lg-spin"],
+                link[href*="spinner-rtl.css"], div[style*="z-index: 10000"]
+                { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; z-index: -9999 !important; }
 
-            html, body {
-                overflow: auto !important;
-                height: auto !important;
-            }
-
-            [class*="chat"], [id*="chat"], [class*="proactive"], 
-            .alk-container, #genesys-chat, .genesys-messenger,
-            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            .c-membership-popup, [class*="cloud-shoplive"], [class*="csl-"], 
-            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-            .open-button, .js-video-pause, .js-video-play
-            { display: none !important; visibility: hidden !important; }
-
-            *, *::before, *::after {
-                transition-duration: 0s !important;
-                animation-duration: 0s !important;
-            }
-            img, .c-hero-banner {
-                image-rendering: -webkit-optimize-contrast !important;
-                image-rendering: crisp-edges !important;
-            }
-        `;
-        document.head.appendChild(style);
-
-        // 2. Persistent Stripper (Handles Iframes AND Dynamic Stylesheets)
-        const cleanup = () => {
-            // A. Remove <link> stylesheets that contain 'spinner' in the URL (Targeting the specific CSS file)
-            const links = document.querySelectorAll('link[rel="stylesheet"]');
-            links.forEach(link => {
-                const href = link.getAttribute('href') || '';
-                if (href.includes('spinner') || href.includes('spin')) {
-                    link.remove();
+                /* SPEED: Disable transitions for instant navigation */
+                *, *::before, *::after {
+                    transition-duration: 0s !important;
+                    animation-duration: 0s !important;
+                    transition-delay: 0s !important;
+                    animation-delay: 0s !important;
                 }
-            });
 
-            // B. Find and remove iframes
-            const frames = document.querySelectorAll('iframe');
-            frames.forEach(frame => {
-                if (frame.id.includes('lg-spin') || frame.src.includes('spin') || frame.className.includes('lg-spin')) {
-                    frame.remove();
+                /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
+                .cmp-carousel__item, .c-hero-banner, img {
+                    image-rendering: -webkit-optimize-contrast !important;
+                    image-rendering: crisp-edges !important;
+                    transform: translateZ(0) !important;
+                    backface-visibility: hidden !important;
+                    perspective: 1000 !important;
                 }
+                
+                html, body { overflow: auto !important; height: auto !important; position: static !important; }
+            `;
+            document.head.appendChild(style);
+        }
+
+        // 2. MutationObserver Sentinel for late-loading elements (like Spinner CSS)
+        if (!window.spinnerObserver) {
+            window.spinnerObserver = new MutationObserver((mutations) => {
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeName === 'LINK' && node.href && node.href.includes('spinner-rtl.css')) {
+                            node.remove();
+                        }
+                        if (node.nodeType === 1) {
+                            if (node.id.includes('lg-spin') || 
+                                node.classList.contains('lg-spin-root') || 
+                                node.classList.contains('spinner') ||
+                                (node.getAttribute && node.getAttribute('href')?.includes('spinner-rtl.css'))) {
+                                node.remove();
+                            }
+                        }
+                    });
+                });
+                document.querySelectorAll('link[href*="spinner-rtl.css"], #lg-spin-root').forEach(el => el.remove());
             });
+            window.spinnerObserver.observe(document.documentElement, { childList: true, subtree: true });
+        }
 
-            // C. Remove root div
-            const spinRoot = document.getElementById('lg-spin-root') || document.querySelector('.lg-spin-root');
-            if (spinRoot) spinRoot.remove();
-
-            // D. Strip scroll-locking classes
-            document.body.classList.remove('is-open', 'modal-open', 'no-scroll');
-            document.documentElement.classList.remove('is-open', 'modal-open', 'no-scroll');
-        };
-
-        // Run every 500ms for 15 seconds to catch delayed injections
-        const intervalId = setInterval(cleanup, 500);
-        setTimeout(() => clearInterval(intervalId), 15000);
-
-        // 3. Static cleanup
-        const hideSelectors = ['.c-header', '.navigation', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
 
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
+        opacitySelectors.forEach(s => {
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
+        });
+
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
+        document.querySelectorAll('link[href*="spinner-rtl.css"], #lg-spin-root').forEach(el => el.remove());
     """)
+
 
 def find_hero_carousel(page, log_callback=None):
     """
@@ -475,11 +473,13 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
 
+        # NETWORK BLOCKER: Aborts requests for the spinner CSS and Chatbots
         def block_chat_requests(route):
             url_str = route.request.url.lower()
-            chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
-                             "proactive-chat"]
-            if any(key in url_str for key in chat_keywords):
+            if "spinner-rtl.css" in url_str or "lg-spin" in url_str or "spinner" in url_str:
+                log(f"🚫 Network block: {url_str.split('/')[-1]}")
+                route.abort()
+            elif any(key in url_str for key in ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot", "proactive-chat"]):
                 route.abort()
             else:
                 route.continue_()
@@ -728,11 +728,14 @@ def main():
             all_subs.extend(r_list)
 
         # Build Dropdown Options
+        # Options will be: Region Name, All Subsidiaries, or Individual Country Name
         country_labels = ["All Subsidiaries", "Asia", "Europe", "LATAM", "MEA", "Canada"]
+        
+        # Add individual countries (sorted)
         individual_sorted = sorted(all_subs, key=lambda x: x[1])
         country_labels.extend([label for _, label in individual_sorted])
 
-        selected_option = st.selectbox("Subsidiary/Region", options=country_labels, index=0)
+        selected_option = st.selectbox("Subsidiary/Region", options=country_labels, index=0) # Default to All Subsidiaries
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
@@ -744,6 +747,7 @@ def main():
         st.divider()
         run_btn = st.button("Start Capture", type="primary", use_container_width=True)
         
+        # Stop Capture Button replaces "Run All Subsidiaries"
         if st.button("Stop Capture", use_container_width=True):
             st.session_state.stop_requested = True
             st.warning("Stop requested. Will exit after current country finishes.")
@@ -755,26 +759,34 @@ def main():
     def add_log(message):
         msg = f"`{datetime.now().strftime('%H:%M:%S')}` {message}"
         st.session_state.log_messages.append(msg)
+        
+        # Keep only the last 50 logs to prevent memory/app reset issues
         if len(st.session_state.log_messages) > 50:
             st.session_state.log_messages = st.session_state.log_messages[-50:]
+            
         log_placeholder.markdown("\n\n".join(st.session_state.log_messages[::-1]))
 
+    # Logic for Capture
     if run_btn:
         st.session_state.log_messages = []
         st.session_state.stop_requested = False
         
+        # Determine the queue based on selection
         capture_queue = []
         if selected_option == "All Subsidiaries":
             capture_queue = all_subs
         elif selected_option in regions:
             capture_queue = regions[selected_option]
         else:
+            # It's an individual country
             selected_code = next(code for code, label in all_subs if label == selected_option)
             capture_queue = [(selected_code, selected_option)]
 
         add_log(f"🏁 Starting capture for **{selected_option}** ({len(capture_queue)} sites) in **{mode}** mode...")
+        
         progress_bar = st.progress(0)
         
+        # Single view for results if only 1 country, otherwise just show logs
         if len(capture_queue) == 1:
             site, label = capture_queue[0]
             country_full_name = label.split(" (")[0]
@@ -792,7 +804,7 @@ def main():
                     cloudinary_urls.append(cloudinary_url)
                     
                 with cols[idx % 3]:
-                    st.image(img_path, caption=f"Slide {slide_num}")
+                    st.image(img_path, caption=f"Slide {num}")
                     if cloudinary_url: st.caption(f"☁️ [View on Cloudinary]({cloudinary_url})")
 
             if upload_enabled and cloudinary_urls:
@@ -809,6 +821,7 @@ def main():
                                    mime="application/zip", use_container_width=True)
                 st.success(f"✅ Capture complete! {len(captured_files)} images saved.")
         else:
+            # Batch process
             for i, (c_code, c_label) in enumerate(capture_queue):
                 if st.session_state.stop_requested:
                     add_log("🛑 Capture process stopped by user.")
@@ -816,6 +829,7 @@ def main():
                     
                 c_full_name = c_label.split(" (")[0]
                 url = f"https://www.lg.com/{c_code}/"
+                
                 add_log(f"🌍 Processing **{c_label}** ({i+1}/{len(capture_queue)})...")
                 cloudinary_urls = []
                 
@@ -827,13 +841,16 @@ def main():
                 if upload_enabled and cloudinary_urls:
                     save_to_airtable(c_code, mode, cloudinary_urls, c_full_name)
                 
+                # Manual memory cleanup after each country
                 import gc
                 gc.collect()
+                
                 progress_bar.progress((i + 1) / len(capture_queue))
             
             if not st.session_state.stop_requested:
                 add_log("✨ Batch processing complete!")
                 st.success("✅ Selected region/group processed successfully.")
+
 
 if __name__ == "__main__":
     main()
