@@ -215,72 +215,72 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Spinner Killer."""
+    """Comprehensive CSS cleanup with Sharpening, Speed fixes, and Auto-Close Popup logic."""
     page_obj.evaluate("""
-        // 1. Force hide via injected global styles
-        if (!document.getElementById('capture-cleanup-style')) {
-            const style = document.createElement('style');
-            style.id = 'capture-cleanup-style';
-            style.innerHTML = `
-                [class*="chat"], [id*="chat"], [class*="proactive"], 
-                .alk-container, #genesys-chat, .genesys-messenger,
-                .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-                .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-                .c-membership-popup, 
-                [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-                .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-                .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-                .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"],
-                #lg-spin-root, .lg-spin-root, [class*="spinner"], [id*="spinner"],
-                iframe[src*="spin"], iframe[id*="lg-spin"], [class*="lg-spin"],
-                link[href*="spinner-rtl.css"], div[style*="z-index: 10000"]
-                { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; z-index: -9999 !important; }
+        // 1. Injected styles for hiding elements and fixing sharpness
+        const style = document.createElement('style');
+        style.innerHTML = `
+            [class*="chat"], [id*="chat"], [class*="proactive"], 
+            .alk-container, #genesys-chat, .genesys-messenger,
+            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+            .c-membership-popup, #lg-spin-root, .lg-spin-root,
+            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+            .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
-                /* SPEED: Disable transitions for instant navigation */
-                *, *::before, *::after {
-                    transition-duration: 0s !important;
-                    animation-duration: 0s !important;
-                    transition-delay: 0s !important;
-                    animation-delay: 0s !important;
-                }
+            /* SPEED: Disable transitions for instant navigation */
+            *, *::before, *::after {
+                transition-duration: 0s !important;
+                animation-duration: 0s !important;
+                transition-delay: 0s !important;
+                animation-delay: 0s !important;
+            }
 
-                /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
-                .cmp-carousel__item, .c-hero-banner, img {
-                    image-rendering: -webkit-optimize-contrast !important;
-                    image-rendering: crisp-edges !important;
-                    transform: translateZ(0) !important;
-                    backface-visibility: hidden !important;
-                    perspective: 1000 !important;
-                }
-                
-                html, body { overflow: auto !important; height: auto !important; position: static !important; }
-            `;
-            document.head.appendChild(style);
-        }
+            /* Sharpness Fixes */
+            .cmp-carousel__item, .c-hero-banner, img {
+                image-rendering: -webkit-optimize-contrast !important;
+                image-rendering: crisp-edges !important;
+                transform: translateZ(0) !important;
+                backface-visibility: hidden !important;
+                perspective: 1000 !important;
+            }
+        `;
+        document.head.appendChild(style);
 
-        // 2. MutationObserver Sentinel for late-loading elements (like Spinner CSS)
-        if (!window.spinnerObserver) {
-            window.spinnerObserver = new MutationObserver((mutations) => {
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeName === 'LINK' && node.href && node.href.includes('spinner-rtl.css')) {
-                            node.remove();
-                        }
-                        if (node.nodeType === 1) {
-                            if (node.id.includes('lg-spin') || 
-                                node.classList.contains('lg-spin-root') || 
-                                node.classList.contains('spinner') ||
-                                (node.getAttribute && node.getAttribute('href')?.includes('spinner-rtl.css'))) {
-                                node.remove();
-                            }
-                        }
-                    });
+        // 2. AUTO-CLOSE POPUP LOGIC
+        // Targets Membership popups AND the new Spin to Win popup
+        const closeSelectors = [
+            '.lg-spin-x',
+            '.lg-spin-close',
+            '[data-lg-spin-close]',
+            '.c-membership-popup__close', 
+            '.c-pop-msg__close-btn', 
+            '.c-pop-msg__close',
+            '[class*="popup"] [class*="close"]',
+            '.c-pop-msg .js-pop-close'
+        ];
+
+        function closePopups() {
+            closeSelectors.forEach(selector => {
+                const btns = document.querySelectorAll(selector);
+                btns.forEach(btn => {
+                    if (btn && typeof btn.click === 'function') {
+                        console.log('Auto-closing popup: ' + selector);
+                        btn.click();
+                    }
                 });
-                document.querySelectorAll('link[href*="spinner-rtl.css"], #lg-spin-root').forEach(el => el.remove());
             });
-            window.spinnerObserver.observe(document.documentElement, { childList: true, subtree: true });
+            // Also remove any dark overlays or specific roots that block interaction
+            document.querySelectorAll('.c-pop-msg--active, .c-pop-msg__dimmed, #lg-spin-root').forEach(el => el.remove());
         }
 
+        // Run immediately
+        closePopups();
+
+        // 3. UI Cleanup
         const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
@@ -291,9 +291,8 @@ def apply_clean_styles(page_obj):
             document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
 
-        // Pause videos immediately to prevent motion blur
+        // Pause videos immediately
         document.querySelectorAll('video').forEach(v => v.pause());
-        document.querySelectorAll('link[href*="spinner-rtl.css"], #lg-spin-root').forEach(el => el.remove());
     """)
 
 
@@ -309,7 +308,7 @@ def find_hero_carousel(page, log_callback=None):
 
     log("🔍 Detecting hero carousel...")
 
-    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser, .c-membership-popup"
+    excluded_wrappers = ".c-notification-banner, .l-cookie-teaser, .c-membership-popup, #lg-spin-root"
 
     hero_selectors = [
         "main .cmp-carousel",
@@ -473,13 +472,11 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
 
-        # NETWORK BLOCKER: Aborts requests for the spinner CSS and Chatbots
         def block_chat_requests(route):
             url_str = route.request.url.lower()
-            if "spinner-rtl.css" in url_str or "lg-spin" in url_str or "spinner" in url_str:
-                log(f"🚫 Network block: {url_str.split('/')[-1]}")
-                route.abort()
-            elif any(key in url_str for key in ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot", "proactive-chat"]):
+            chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
+                             "proactive-chat"]
+            if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
                 route.continue_()
@@ -492,12 +489,28 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
 
             try:
+                # 1. Cookie Acceptance
                 accept_btn = page.locator("#onetrust-accept-btn-handler")
                 if accept_btn.is_visible(timeout=5000):
                     log("🍪 Accepting cookies...")
                     accept_btn.click()
-                    # Shortened wait after cookie acceptance
                     time.sleep(0.5)
+                
+                # 2. AUTOMATIC POPUP CLOSE (Specific to Spin to Win and Membership)
+                popup_close_selectors = [
+                    ".lg-spin-x",
+                    ".lg-spin-close",
+                    "[data-lg-spin-close]",
+                    ".c-membership-popup__close", 
+                    ".c-pop-msg__close-btn", 
+                    ".c-pop-msg__close"
+                ]
+                for selector in popup_close_selectors:
+                    close_btn = page.locator(selector).first
+                    if close_btn.is_visible(timeout=2000):
+                        log(f"✖️ Closing popup using {selector}...")
+                        close_btn.click()
+                        time.sleep(0.3)
             except:
                 pass
 
@@ -547,7 +560,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
 
-                    # 3. Apply styles for clean capture
+                    # 3. Apply styles for clean capture (This now includes the auto-close popup JS)
                     apply_clean_styles(page)
 
                     # 4. Detect "Current Slide Signature" to verify uniqueness
@@ -785,19 +798,16 @@ def main():
         
         progress_bar = st.progress(0)
         
-        # Site processing loop
-        for i, (site, label) in enumerate(capture_queue):
-            if st.session_state.stop_requested:
-                add_log("🛑 Capture process stopped by user.")
-                break
-                
+        # Single view for results if only 1 country, otherwise just show logs
+        if len(capture_queue) == 1:
+            site, label = capture_queue[0]
             country_full_name = label.split(" (")[0]
             url = f"https://www.lg.com/{site}/"
+            captured_files = []
+            cloudinary_urls = []
             
             st.subheader(f"Results: {site.upper()} ({mode})")
             cols = st.columns(3)
-            captured_files = []
-            cloudinary_urls = []
             
             for idx, result in enumerate(capture_hero_banners(url, site, mode, log_callback=add_log, upload_to_cloud=upload_enabled)):
                 img_path, slide_num, cloudinary_url = result
@@ -810,18 +820,48 @@ def main():
                     if cloudinary_url: st.caption(f"☁️ [View on Cloudinary]({cloudinary_url})")
 
             if upload_enabled and cloudinary_urls:
-                add_log(f"💾 Saving {site.upper()} record to Airtable...")
+                add_log("💾 Saving record to Airtable...")
                 save_to_airtable(site, mode, cloudinary_urls, country_full_name)
             
-            # Manual memory cleanup after each country
-            import gc
-            gc.collect()
+            if captured_files:
+                st.divider()
+                zip_buffer = io.BytesIO()
+                with zipfile.ZipFile(zip_buffer, "w") as zf:
+                    for fpath in captured_files: zf.write(fpath, os.path.basename(fpath))
+                st.download_button(label="📥 Download Banners (ZIP)", data=zip_buffer.getvalue(),
+                                   file_name=f"banners_{site}_{mode}_{datetime.now().strftime('%Y%m%d')}.zip",
+                                   mime="application/zip", use_container_width=True)
+                st.success(f"✅ Capture complete! {len(captured_files)} images saved.")
+        else:
+            # Batch process
+            for i, (c_code, c_label) in enumerate(capture_queue):
+                if st.session_state.stop_requested:
+                    add_log("🛑 Capture process stopped by user.")
+                    break
+                    
+                c_full_name = c_label.split(" (")[0]
+                url = f"https://www.lg.com/{c_code}/"
+                
+                add_log(f"🌍 Processing **{c_label}** ({i+1}/{len(capture_queue)})...")
+                cloudinary_urls = []
+                
+                for result in capture_hero_banners(url, c_code, mode, log_callback=add_log, upload_to_cloud=upload_enabled):
+                    _, _, cloudinary_url = result
+                    if cloudinary_url:
+                        cloudinary_urls.append(cloudinary_url)
+                
+                if upload_enabled and cloudinary_urls:
+                    save_to_airtable(c_code, mode, cloudinary_urls, c_full_name)
+                
+                # Manual memory cleanup after each country
+                import gc
+                gc.collect()
+                
+                progress_bar.progress((i + 1) / len(capture_queue))
             
-            progress_bar.progress((i + 1) / len(capture_queue))
-            
-        if not st.session_state.stop_requested:
-            add_log("✨ Processing complete!")
-            st.success("✅ Selected region/group processed successfully.")
+            if not st.session_state.stop_requested:
+                add_log("✨ Batch processing complete!")
+                st.success("✅ Selected region/group processed successfully.")
 
 
 if __name__ == "__main__":
