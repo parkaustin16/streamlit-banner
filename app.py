@@ -450,6 +450,34 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
         page.route("**/*", block_chat_requests)
 
+        # DISABLE TIMERS BEFORE PAGE LOADS
+        page.add_init_script("""
+            // Override setTimeout and setInterval to prevent the 6-second modal trigger
+            (function() {
+                const originalSetTimeout = window.setTimeout;
+                const originalSetInterval = window.setInterval;
+                
+                window.setTimeout = function(fn, delay, ...args) {
+                    // Block any timer that might trigger the spin-to-win modal
+                    const fnString = fn.toString().toLowerCase();
+                    if (fnString.includes('lg-spin') || fnString.includes('spin') || delay >= 5000) {
+                        console.log('Blocked setTimeout for spin-to-win modal');
+                        return -1; // Return fake timer ID
+                    }
+                    return originalSetTimeout.call(this, fn, delay, ...args);
+                };
+                
+                window.setInterval = function(fn, delay, ...args) {
+                    const fnString = fn.toString().toLowerCase();
+                    if (fnString.includes('lg-spin') || fnString.includes('spin')) {
+                        console.log('Blocked setInterval for spin-to-win modal');
+                        return -1;
+                    }
+                    return originalSetInterval.call(this, fn, delay, ...args);
+                };
+            })();
+        """)
+
         try:
             log(f"🌐 Navigating to {url}...")
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
@@ -484,6 +512,28 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 for attempt in range(4):
                     log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
+                    # PROACTIVELY CLOSE MODAL IF IT APPEARED
+                    try:
+                        close_selectors = [
+                            '[data-lg-spin-close]',
+                            '.lg-spin-x',
+                            '.lg-spin-close',
+                            '#lg-spin-root .lg-spin-modal button[type="button"]'
+                        ]
+                        
+                        for selector in close_selectors:
+                            try:
+                                close_btn = page.locator(selector).first
+                                if close_btn.is_visible(timeout=500):
+                                    log("   🎯 Closing Spin to Win modal...")
+                                    close_btn.click()
+                                    time.sleep(0.3)
+                                    break
+                            except:
+                                continue
+                    except Exception as e:
+                        pass
+
                     page.evaluate(f"""
                         (idx) => {{
                             const car = document.querySelector('.cmp-carousel');
@@ -503,25 +553,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     """, i)
 
                     time.sleep(1.0)
-                    
-                    # PUSH MODAL BEHIND EVERYTHING
-                    page.evaluate("""
-                        const modal = document.querySelector('#lg-spin-root');
-                        if (modal) {
-                            // Set z-index to negative to push behind page content
-                            modal.style.setProperty('z-index', '-999999', 'important');
-                            modal.style.setProperty('position', 'fixed', 'important');
-                            modal.style.setProperty('pointer-events', 'none', 'important');
-                        }
-                        
-                        // Also hide backdrop and modal content
-                        document.querySelectorAll('.lg-spin-backdrop, .lg-spin-modal').forEach(el => {
-                            el.style.setProperty('z-index', '-999999', 'important');
-                            el.style.setProperty('opacity', '0', 'important');
-                            el.style.setProperty('pointer-events', 'none', 'important');
-                        });
-                    """)
-                    
                     apply_clean_styles(page)
 
                     signature_data = page.evaluate(f"""
@@ -579,14 +610,6 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     if element:
                         element.scroll_into_view_if_needed()
                         time.sleep(0.2)
-                        
-                        # ONE MORE PUSH BEFORE SCREENSHOT
-                        page.evaluate("""
-                            document.querySelectorAll('#lg-spin-root, .lg-spin-backdrop, .lg-spin-modal, [id*="lg-spin"], [class*="lg-spin"]').forEach(el => {
-                                el.style.setProperty('z-index', '-999999', 'important');
-                                el.style.setProperty('opacity', '0', 'important');
-                            });
-                        """)
 
                         element.screenshot(path=filepath, scale="device", type="jpeg", quality=95)
                         captured_signatures.append(current_sig)
