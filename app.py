@@ -215,14 +215,15 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Iframe-specific popup removal."""
+    """Comprehensive CSS cleanup with Iframe-specific popup removal and stylesheet blocking."""
     page_obj.evaluate("""
-        // 1. CSS Injection: Targets both the div root AND potential iframes
+        // 1. CSS Injection: Force hide any visual element related to spinners
         const style = document.createElement('style');
         style.innerHTML = `
-            /* Hide the root and any iframe that might contain the spin wheel */
             #lg-spin-root, 
             .lg-spin-root,
+            [class*="spinner"],
+            [id*="spinner"],
             iframe[src*="spin"], 
             iframe[id*="lg-spin"],
             [class*="lg-spin"] {
@@ -232,13 +233,11 @@ def apply_clean_styles(page_obj):
                 pointer-events: none !important;
             }
 
-            /* Restore scrolling in case the iframe locks the body */
             html, body {
                 overflow: auto !important;
                 height: auto !important;
             }
 
-            /* Existing cleanup selectors */
             [class*="chat"], [id*="chat"], [class*="proactive"], 
             .alk-container, #genesys-chat, .genesys-messenger,
             .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
@@ -248,7 +247,6 @@ def apply_clean_styles(page_obj):
             .open-button, .js-video-pause, .js-video-play
             { display: none !important; visibility: hidden !important; }
 
-            /* SPEED & SHARPNESS */
             *, *::before, *::after {
                 transition-duration: 0s !important;
                 animation-duration: 0s !important;
@@ -260,9 +258,18 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        // 2. Persistent Iframe & Class Stripper
+        // 2. Persistent Stripper (Handles Iframes AND Dynamic Stylesheets)
         const cleanup = () => {
-            // Find any iframe containing "lg-spin" or "spin" in ID, Class, or Src
+            // A. Remove <link> stylesheets that contain 'spinner' in the URL (Targeting the specific CSS file)
+            const links = document.querySelectorAll('link[rel="stylesheet"]');
+            links.forEach(link => {
+                const href = link.getAttribute('href') || '';
+                if (href.includes('spinner') || href.includes('spin')) {
+                    link.remove();
+                }
+            });
+
+            // B. Find and remove iframes
             const frames = document.querySelectorAll('iframe');
             frames.forEach(frame => {
                 if (frame.id.includes('lg-spin') || frame.src.includes('spin') || frame.className.includes('lg-spin')) {
@@ -270,16 +277,16 @@ def apply_clean_styles(page_obj):
                 }
             });
 
-            // Also remove the div root if it exists outside an iframe
+            // C. Remove root div
             const spinRoot = document.getElementById('lg-spin-root') || document.querySelector('.lg-spin-root');
             if (spinRoot) spinRoot.remove();
 
-            // Strip scroll-locking classes from body/html
+            // D. Strip scroll-locking classes
             document.body.classList.remove('is-open', 'modal-open', 'no-scroll');
             document.documentElement.classList.remove('is-open', 'modal-open', 'no-scroll');
         };
 
-        // Run every 500ms for 15 seconds to catch the 6s delayed iframe injection
+        // Run every 500ms for 15 seconds to catch delayed injections
         const intervalId = setInterval(cleanup, 500);
         setTimeout(() => clearInterval(intervalId), 15000);
 
@@ -721,14 +728,11 @@ def main():
             all_subs.extend(r_list)
 
         # Build Dropdown Options
-        # Options will be: Region Name, All Subsidiaries, or Individual Country Name
         country_labels = ["All Subsidiaries", "Asia", "Europe", "LATAM", "MEA", "Canada"]
-        
-        # Add individual countries (sorted)
         individual_sorted = sorted(all_subs, key=lambda x: x[1])
         country_labels.extend([label for _, label in individual_sorted])
 
-        selected_option = st.selectbox("Subsidiary/Region", options=country_labels, index=0) # Default to All Subsidiaries
+        selected_option = st.selectbox("Subsidiary/Region", options=country_labels, index=0)
         mode = st.selectbox("View Mode", options=["desktop", "mobile"])
 
         st.divider()
@@ -740,7 +744,6 @@ def main():
         st.divider()
         run_btn = st.button("Start Capture", type="primary", use_container_width=True)
         
-        # Stop Capture Button replaces "Run All Subsidiaries"
         if st.button("Stop Capture", use_container_width=True):
             st.session_state.stop_requested = True
             st.warning("Stop requested. Will exit after current country finishes.")
@@ -752,34 +755,26 @@ def main():
     def add_log(message):
         msg = f"`{datetime.now().strftime('%H:%M:%S')}` {message}"
         st.session_state.log_messages.append(msg)
-        
-        # Keep only the last 50 logs to prevent memory/app reset issues
         if len(st.session_state.log_messages) > 50:
             st.session_state.log_messages = st.session_state.log_messages[-50:]
-            
         log_placeholder.markdown("\n\n".join(st.session_state.log_messages[::-1]))
 
-    # Logic for Capture
     if run_btn:
         st.session_state.log_messages = []
         st.session_state.stop_requested = False
         
-        # Determine the queue based on selection
         capture_queue = []
         if selected_option == "All Subsidiaries":
             capture_queue = all_subs
         elif selected_option in regions:
             capture_queue = regions[selected_option]
         else:
-            # It's an individual country
             selected_code = next(code for code, label in all_subs if label == selected_option)
             capture_queue = [(selected_code, selected_option)]
 
         add_log(f"🏁 Starting capture for **{selected_option}** ({len(capture_queue)} sites) in **{mode}** mode...")
-        
         progress_bar = st.progress(0)
         
-        # Single view for results if only 1 country, otherwise just show logs
         if len(capture_queue) == 1:
             site, label = capture_queue[0]
             country_full_name = label.split(" (")[0]
@@ -814,7 +809,6 @@ def main():
                                    mime="application/zip", use_container_width=True)
                 st.success(f"✅ Capture complete! {len(captured_files)} images saved.")
         else:
-            # Batch process
             for i, (c_code, c_label) in enumerate(capture_queue):
                 if st.session_state.stop_requested:
                     add_log("🛑 Capture process stopped by user.")
@@ -822,7 +816,6 @@ def main():
                     
                 c_full_name = c_label.split(" (")[0]
                 url = f"https://www.lg.com/{c_code}/"
-                
                 add_log(f"🌍 Processing **{c_label}** ({i+1}/{len(capture_queue)})...")
                 cloudinary_urls = []
                 
@@ -834,16 +827,13 @@ def main():
                 if upload_enabled and cloudinary_urls:
                     save_to_airtable(c_code, mode, cloudinary_urls, c_full_name)
                 
-                # Manual memory cleanup after each country
                 import gc
                 gc.collect()
-                
                 progress_bar.progress((i + 1) / len(capture_queue))
             
             if not st.session_state.stop_requested:
                 add_log("✨ Batch processing complete!")
                 st.success("✅ Selected region/group processed successfully.")
-
 
 if __name__ == "__main__":
     main()
