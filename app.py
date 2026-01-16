@@ -217,48 +217,20 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 def apply_clean_styles(page_obj):
     """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
-        // AGGRESSIVE REMOVAL
-        document.querySelectorAll('.c-notification-banner, .cmp-embed, [class*="cmp-embed"], #lg-spin-root, [id*="lg-spin"], [class*="lg-spin"], [id*="embed-"]').forEach(el => {
-            if (el.parentNode) {
-                el.parentNode.removeChild(el);
-            }
-        });
-        
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
-            /* NUCLEAR OPTION - Override inline styles */
-            #lg-spin-root,
-            #lg-spin-root *,
-            [id*="lg-spin"],
-            [id*="lg-spin"] *,
-            [class*="lg-spin"],
-            [class*="lg-spin"] *,
-            .cmp-embed,
-            .cmp-embed *,
-            [id*="embed-"],
-            [id*="embed-"] *,
             [class*="chat"], [id*="chat"], [class*="proactive"], 
-            .alk-container, #genesys-chat, .genesys-messenger,
-            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            .c-membership-popup, 
-            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-            .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
-            .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
-            { 
-                display: none !important; 
-                visibility: hidden !important; 
-                opacity: 0 !important; 
-                pointer-events: none !important;
-                position: absolute !important;
-                left: -99999px !important;
-                top: -99999px !important;
-                width: 0 !important;
-                height: 0 !important;
-                z-index: -999999 !important;
-            }
-            
+        .alk-container, #genesys-chat, .genesys-messenger,
+        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        .c-membership-popup, 
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
+
             /* SPEED: Disable transitions for instant navigation */
             *, *::before, *::after {
                 transition-duration: 0s !important;
@@ -266,8 +238,8 @@ def apply_clean_styles(page_obj):
                 transition-delay: 0s !important;
                 animation-delay: 0s !important;
             }
-            
-            /* Sharpness Fixes */
+
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
@@ -277,17 +249,17 @@ def apply_clean_styles(page_obj):
             }
         `;
         document.head.appendChild(style);
-        
+
         const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
-        
+
         const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
         opacitySelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
-        
+
         // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
@@ -446,6 +418,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         if log_callback:
             log_callback(message)
 
+    # Resolution Boost: We set a high device_pixel_ratio to avoid blurriness
     size: ViewportSize = {'width': 1920, 'height': 720} if mode == 'desktop' else {'width': 360, 'height': 480}
 
     session_folder_name = f"{country_code}_{mode}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -464,20 +437,14 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             ]
         )
 
+        # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
         page = context.new_page()
 
         def block_chat_requests(route):
             url_str = route.request.url.lower()
-            chat_keywords = [
-                "genesys", "liveperson", "salesforceliveagent", "adobe-privacy", 
-                "chatbot", "proactive-chat", 
-                "spinner", "spin-to-win", "lg-spin", 
-                "spinner-rtl.js", "spinner10-rtl.js", "spinner-rtl.css",
-                "/spinner/", "/spin-to-win/",
-                "wcms/sa_en/home-page/home-redesign/banners-2026/elements/spinner"
-            ]
-            
+            chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
+                             "proactive-chat"]
             if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
@@ -485,75 +452,9 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
         page.route("**/*", block_chat_requests)
 
-        # SABOTAGE SCRIPT - Runs before ANY page script
-        page.add_init_script("""
-            // Intercept and disable the spin-to-win modal BEFORE it initializes
-            (function() {
-                // Override any attempt to show the modal
-                Object.defineProperty(HTMLElement.prototype, 'style', {
-                    get: function() {
-                        return this._style || (this._style = new Proxy({}, {
-                            set: function(target, prop, value) {
-                                // Block any element with lg-spin in ID/class from being shown
-                                const el = arguments[2];
-                                if (el && el.id && el.id.includes('lg-spin')) {
-                                    if (prop === 'display') value = 'none';
-                                    if (prop === 'visibility') value = 'hidden';
-                                    if (prop === 'opacity') value = '0';
-                                    if (prop === 'zIndex') value = '-9999';
-                                }
-                                target[prop] = value;
-                                return true;
-                            },
-                            get: function(target, prop) {
-                                return target[prop];
-                            }
-                        }));
-                    }
-                });
-                
-                // Nuclear removal loop
-                function destroySpinToWin() {
-                    const selectors = [
-                        '#lg-spin-root',
-                        '[id*="lg-spin"]',
-                        '[class*="lg-spin"]',
-                        '.cmp-embed',
-                        '[id*="embed-6db47dc8c5"]'
-                    ];
-                    
-                    selectors.forEach(sel => {
-                        document.querySelectorAll(sel).forEach(el => {
-                            if (el && el.parentNode) {
-                                el.parentNode.removeChild(el);
-                            }
-                        });
-                    });
-                }
-                
-                // Run continuously
-                setInterval(destroySpinToWin, 50);
-                
-                // Run on DOM changes
-                const observer = new MutationObserver(destroySpinToWin);
-                if (document.documentElement) {
-                    observer.observe(document.documentElement, { 
-                        childList: true, 
-                        subtree: true 
-                    });
-                }
-                
-                // Run when DOM is ready
-                if (document.readyState === 'loading') {
-                    document.addEventListener('DOMContentLoaded', destroySpinToWin);
-                } else {
-                    destroySpinToWin();
-                }
-            })();
-        """)
-
         try:
             log(f"🌐 Navigating to {url}...")
+            # SPEED FIX: Use domcontentloaded for faster start
             page.goto(url, wait_until="domcontentloaded", timeout=90000)
 
             try:
@@ -561,6 +462,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 if accept_btn.is_visible(timeout=5000):
                     log("🍪 Accepting cookies...")
                     accept_btn.click()
+                    # Shortened wait after cookie acceptance
                     time.sleep(0.5)
             except:
                 pass
@@ -577,20 +479,24 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             num_slides = len(indicators)
             log(f"📸 Found {num_slides} indicators in carousel.")
 
+            # TRACKER: To prevent capturing the same banner twice
             captured_signatures = []
 
             for i in range(num_slides):
                 slide_num = i + 1
                 success = False
 
-                for attempt in range(4):
+                # ATTEMPT LOOP: Handles mobile snapping/duplicates
+                for attempt in range(4):  # Increased to 4 attempts for tricky sites
                     log(f"   Capturing slide {slide_num} (Attempt {attempt + 1})...")
 
+                    # 1. Force the swiper state & stop autoplay via JS
                     page.evaluate(f"""
                         (idx) => {{
                             const car = document.querySelector('.cmp-carousel');
                             if (car && car.swiper) {{
                                 car.swiper.autoplay.stop();
+                                // Force zero speed for instant jump to avoid animation blur
                                 car.swiper.params.speed = 0;
                                 if (typeof car.swiper.slideToLoop === 'function') {{
                                     car.swiper.slideToLoop(idx);
@@ -604,24 +510,13 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         }}
                     """, i)
 
+                    # 2. Hard wait for visual stability (Reduced to 1s because transitions are disabled)
                     time.sleep(1.0)
-                    apply_clean_styles(page)
-                    
-                    # EXTRA AGGRESSIVE REMOVAL RIGHT BEFORE CAPTURE
-                    page.evaluate("""
-                        // Remove all spin elements
-                        document.querySelectorAll('#lg-spin-root, [id*="lg-spin"], [class*="lg-spin"], .cmp-embed, [id*="embed-"]').forEach(el => {
-                            try {
-                                el.remove();
-                            } catch(e) {}
-                        });
-                        
-                        // Force hide with inline styles
-                        const style = document.createElement('style');
-                        style.textContent = '#lg-spin-root, [id*="lg-spin"], [class*="lg-spin"] { display: none !important; visibility: hidden !important; opacity: 0 !important; z-index: -999999 !important; }';
-                        document.head.appendChild(style);
-                    """)
 
+                    # 3. Apply styles for clean capture
+                    apply_clean_styles(page)
+
+                    # 4. Detect "Current Slide Signature" to verify uniqueness
                     signature_data = page.evaluate(f"""
                         (targetIdx) => {{
                             const active = document.querySelector(`.swiper-slide-active[data-swiper-slide-index="${{targetIdx}}"]`) 
@@ -632,6 +527,8 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                             const img = active.querySelector('img');
                             const text = active.innerText.trim().substring(0, 80);
                             const currentIdx = active.getAttribute('data-swiper-slide-index');
+
+                            // FORCE A REFLOW to fix sub-pixel blur before return
                             active.offsetHeight; 
 
                             return {{
@@ -654,12 +551,14 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                         time.sleep(0.5)
                         continue
 
+                    # 5. Capture Logic
                     active_slide_selector = f".cmp-carousel__item.swiper-slide-active[data-swiper-slide-index='{i}']"
                     try:
                         page.wait_for_selector(active_slide_selector, timeout=2000)
                     except:
                         active_slide_selector = ".cmp-carousel__item.swiper-slide-active"
 
+                    # SPEED FIX: Use JPEG instead of PNG for faster processing
                     filename = f"{country_code}_{mode}_hero_{slide_num}.jpg"
                     filepath = os.path.join(session_path, filename)
 
@@ -676,17 +575,22 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
                     if element:
                         element.scroll_into_view_if_needed()
+                        # Shortened wait for settling
                         time.sleep(0.2)
 
+                        # Use scale='device' for the screenshot to respect our DPR 2.0
+                        # SPEED FIX: Save as JPEG to reduce file size and encoding time
                         element.screenshot(path=filepath, scale="device", type="jpeg", quality=95)
                         captured_signatures.append(current_sig)
                         log(f"✅ Captured: {filename}")
 
                         cloudinary_url = None
+                        cloudinary_id = None
 
                         if upload_to_cloud:
                             log(f"☁️ Uploading to Cloud...")
-                            cloudinary_url, _ = upload_to_cloudinary(filepath, country_code, mode, slide_num)
+                            cloudinary_url, cloudinary_id = upload_to_cloudinary(filepath, country_code, mode,
+                                                                                 slide_num)
 
                         yield filepath, slide_num, cloudinary_url
                         success = True
