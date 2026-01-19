@@ -452,81 +452,14 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
-        def block_spin(route, request):
-            url = request.url.lower()
-
-            if (
-                "spin" in url
-                or "spin-to-win" in url
-                or "lg-spin" in url
-                or "ncms" in url
-            ):
-                route.abort()
-                return
-
-            route.continue_()
-
-        context.route("**/*", block_spin)
-        context.add_init_script("""
-/* 🔥 PRE-EXECUTION POISON */
-Object.defineProperty(window, "__LG_SPIN_SINGLETON__", {
-  value: true,
-  writable: false,
-  configurable: false
-});
-
-/* Kill timers globally BEFORE scripts load */
-window.setTimeout = () => 0;
-window.setInterval = () => 0;
-window.requestAnimationFrame = () => 0;
-
-/* Block DOM injection */
-const origAppend = Element.prototype.appendChild;
-Element.prototype.appendChild = function(node) {
-  if (
-    node &&
-    node.nodeType === 1 &&
-    (
-      node.id === "lg-spin-root" ||
-      (node.className && String(node.className).includes("lg-spin"))
+        def block_spin(route):
+    route.fulfill(
+        status=200,
+        content_type="application/javascript",
+        body=""  # empty script
     )
-  ) {
-    return node;
-  }
-  return origAppend.call(this, node);
-};
-""")
-        page = context.new_page()
-        page.add_init_script("""
-(() => {
-  const killSpin = () => {
-    const root = document.getElementById('lg-spin-root');
-    if (!root) return;
 
-    // Make it think it is closed
-    root.classList.remove('is-open');
-    root.setAttribute('aria-hidden', 'true');
-
-    // Remove its ability to re-open
-    Object.defineProperty(root, 'style', {
-      value: {},
-      writable: false
-    });
-
-    // Disable pointer & rendering
-    root.style.display = 'none';
-    root.style.visibility = 'hidden';
-    root.style.pointerEvents = 'none';
-  };
-
-  // Run immediately
-  killSpin();
-
-  // Run again after DOM mutations (NCMS reasserts state)
-  const obs = new MutationObserver(killSpin);
-  obs.observe(document.documentElement, { childList: true, subtree: true });
-})();
-""")
+        context.route("**/spinner10-rtl.js", block_spin)
 
         def block_chat_requests(route):
             url_str = route.request.url.lower()
