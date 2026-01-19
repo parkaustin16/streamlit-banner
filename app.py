@@ -259,13 +259,9 @@ def apply_clean_styles(page_obj):
         opacitySelectors.forEach(s => {
             document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
-        Nuclear cleanup specifically targeting the 'spinner10-rtl.js' logic.
-    1. Spoof the singleton lock so the script exits immediately.
-    2. Set session storage to fool the logic.
-    3. Physically remove the root and any parent containers.
-    """
-    # JS Spoofing and Hard Removal
-    page_obj.evaluate("""
+
+        // Pause videos immediately to prevent motion blur
+        document.querySelectorAll('video').forEach(v => v.pause());
         // 1. Spoof the Singleton Lock used in spinner10-rtl.js
         window.__LG_SPIN_SINGLETON__ = true;
         
@@ -299,20 +295,6 @@ def apply_clean_styles(page_obj):
             window.nukeObserver = new MutationObserver(nuke);
             window.nukeObserver.observe(document.body, { childList: true, subtree: true });
         }
-    
-
-    # CSS Injection for invisible backup
-    page_obj.add_style_tag(content="""
-        #lg-spin-root, .lg-spin-root, .lg-spin-backdrop, #onetrust-consent-sdk { 
-            display: none !important; 
-            visibility: hidden !important; 
-            opacity: 0 !important; 
-            z-index: -1 !important; 
-        }
-        .c-header, .navigation { display: none !important; }
-    """)
-        // Pause videos immediately to prevent motion blur
-        document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
 
@@ -487,10 +469,9 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                 "--disable-gpu"
             ]
         )
-
+        context.add_init_script("window.__LG_SPIN_SINGLETON__ = true; sessionStorage.setItem('lg_spin_shown_v2', '1');")
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
-        context.add_init_script("window.__LG_SPIN_SINGLETON__ = true; sessionStorage.setItem('lg_spin_shown_v2', '1');")
         page = context.new_page()
 
         def block_chat_requests(route):
