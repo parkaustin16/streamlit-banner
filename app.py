@@ -467,7 +467,35 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
             route.continue_()
 
         context.route("**/*", block_spin)
+        context.add_init_script("""
+/* 🔥 PRE-EXECUTION POISON */
+Object.defineProperty(window, "__LG_SPIN_SINGLETON__", {
+  value: true,
+  writable: false,
+  configurable: false
+});
 
+/* Kill timers globally BEFORE scripts load */
+window.setTimeout = () => 0;
+window.setInterval = () => 0;
+window.requestAnimationFrame = () => 0;
+
+/* Block DOM injection */
+const origAppend = Element.prototype.appendChild;
+Element.prototype.appendChild = function(node) {
+  if (
+    node &&
+    node.nodeType === 1 &&
+    (
+      node.id === "lg-spin-root" ||
+      (node.className && String(node.className).includes("lg-spin"))
+    )
+  ) {
+    return node;
+  }
+  return origAppend.call(this, node);
+};
+""")
         page = context.new_page()
         page.add_init_script("""
 (() => {
