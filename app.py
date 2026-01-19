@@ -474,7 +474,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 def log_requests(route, request):
     url = request.url.lower()
     if "spin" in url or "lg" in url or "promo" in url:
-        print("JS REQUEST:", request.url)
+        log(f" JS REQUEST:", request.url")
     route.continue_()
 
 context.route("**/*", log_requests)
@@ -565,8 +565,8 @@ page = context.new_page()
                         }}
                     """, i)
 html = page.content()
-print("INLINE SPIN FOUND:", "lg-spin-root" in html)
-print("INLINE SINGLETON FOUND:", "__LG_SPIN_SINGLETON__" in html)
+log(f"INLINE SPIN FOUND:", "lg-spin-root" in html)
+log(f"INLINE SINGLETON FOUND:", "__LG_SPIN_SINGLETON__" in html)
 for f in page.frames:
     print("FRAME:", f.url)
                     current_sig = signature_data['sig']
