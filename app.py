@@ -452,7 +452,31 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
 
         # USE DPR 2.0 FOR SHARPER CAPTURES
         context = browser.new_context(viewport=size, device_scale_factor=2)
+        def block_spin(route, request):
+            url = request.url.lower()
+
+            if (
+                "spin" in url
+                or "spin-to-win" in url
+                or "lg-spin" in url
+                or "ncms" in url
+            ):
+                route.abort()
+                return
+
+            route.continue_()
+
+        context.route("**/*", block_spin)
+
         page = context.new_page()
+        page.add_init_script("""
+            (() => {
+              const noop = () => 0;
+              window.setTimeout = noop;
+              window.setInterval = noop;
+              window.requestAnimationFrame = noop;
+            })();
+            """)
 
         def block_chat_requests(route):
             url_str = route.request.url.lower()
