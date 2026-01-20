@@ -215,94 +215,21 @@ def save_to_airtable(country_code, mode, urls, full_country_name):
 # --- CORE CAPTURE LOGIC (Enhanced with Hero Detection) ---
 
 def apply_clean_styles(page_obj):
-    """Comprehensive CSS cleanup with Spinner Annihilation."""
+    """Comprehensive CSS cleanup with Sharpening and Speed fixes."""
     page_obj.evaluate("""
-        // ═══════════════════════════════════════════════════════
-        // PHASE 1: DESTROY SPINNER (Before it can defend itself)
-        // ═══════════════════════════════════════════════════════
-        
-        // Kill the singleton lock (prevents respawn)
-        if (window.__LG_SPIN_SINGLETON__) {
-            window.__LG_SPIN_SINGLETON__ = undefined;
-            delete window.__LG_SPIN_SINGLETON__;
-        }
-        
-        // Remove all spinner DOM elements
-        document.querySelectorAll(
-            '#lg-spin-root, [id*="lg-spin"], [class*="lg-spin"]'
-        ).forEach(el => {
-            try { el.remove(); } catch(e) {}
-        });
-        
-        // ═══════════════════════════════════════════════════════
-        // PHASE 2: INSTALL MUTATION OBSERVER (Catch late spawns)
-        // ═══════════════════════════════════════════════════════
-        
-        const spinnerKiller = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                mutation.addedNodes.forEach((node) => {
-                    if (node.nodeType === 1) { // Element node
-                        // Check if it's the spinner or contains spinner
-                        if (node.id === 'lg-spin-root' || 
-                            node.className?.toString().includes('lg-spin')) {
-                            node.remove();
-                        }
-                        // Check children
-                        node.querySelectorAll?.('[id*="lg-spin"], [class*="lg-spin"]')
-                            .forEach(el => el.remove());
-                    }
-                });
-            });
-        });
-        
-        // Watch for spinner injection attempts
-        spinnerKiller.observe(document.body, { 
-            childList: true, 
-            subtree: true 
-        });
-        
-        // ═══════════════════════════════════════════════════════
-        // PHASE 3: CSS SLEDGEHAMMER (Fallback if DOM removal fails)
-        // ═══════════════════════════════════════════════════════
-        
+        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
         const style = document.createElement('style');
         style.innerHTML = `
-            /* SPINNER ANNIHILATION */
-            #lg-spin-root, 
-            #lg-spin-root *, 
-            [id*="lg-spin"], 
-            [class*="lg-spin"],
-            .lg-spin-root,
-            .lg-spin-backdrop,
-            .lg-spin-modal {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-                position: absolute !important;
-                top: -99999px !important;
-                left: -99999px !important;
-                z-index: -999999 !important;
-                width: 0 !important;
-                height: 0 !important;
-            }
-            
-            /* EXISTING CLEANUP (Your original rules) */
             [class*="chat"], [id*="chat"], [class*="proactive"], 
-            .alk-container, #genesys-chat, .genesys-messenger,
-            .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
-            .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
-            .c-membership-popup, .c-notification-banner, .c-notification-banner *,
-            [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
-            .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
-            .open-button, .js-video-pause, .js-video-play, 
-            [aria-label*="Pausar"], [aria-label*="video"]
-            { 
-                display: none !important; 
-                visibility: hidden !important; 
-                opacity: 0 !important; 
-                pointer-events: none !important; 
-            }
+        .alk-container, #genesys-chat, .genesys-messenger,
+        .floating-button-portal, #WAButton, .embeddedServiceHelpButton,
+        .c-pop-toast__container, .onetrust-pc-dark-filter, #onetrust-consent-sdk,
+        .c-membership-popup, 
+        [class*="cloud-shoplive"], [class*="csl-"], [class*="svelte-"], 
+        .l-cookie-teaser, .c-cookie-settings, .LiveMiniPreview,
+        .c-notification-banner, .c-notification-banner *, .c-notification-banner__wrap,
+        .open-button, .js-video-pause, .js-video-play, [aria-label*="Pausar"], [aria-label*="video"]
+            { display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important; }
 
             /* SPEED: Disable transitions for instant navigation */
             *, *::before, *::after {
@@ -312,7 +239,7 @@ def apply_clean_styles(page_obj):
                 animation-delay: 0s !important;
             }
 
-            /* SHARPNESS: Disable smoothing */
+            /* Sharpness Fixes: Disable smoothing that causes blur during screenshots */
             .cmp-carousel__item, .c-hero-banner, img {
                 image-rendering: -webkit-optimize-contrast !important;
                 image-rendering: crisp-edges !important;
@@ -323,37 +250,17 @@ def apply_clean_styles(page_obj):
         `;
         document.head.appendChild(style);
 
-        // ═══════════════════════════════════════════════════════
-        // PHASE 4: EXISTING CLEANUP (Your original code)
-        // ═══════════════════════════════════════════════════════
-        
-        // Remove notification banners
-        document.querySelectorAll('.c-notification-banner').forEach(el => el.remove());
-
-        // Hide navigation elements
-        const hideSelectors = [
-            '.c-header', '.navigation', '.iw_viewport-wrapper > header', 
-            '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'
-        ];
+        const hideSelectors = ['.c-header', '.navigation', '.iw_viewport-wrapper > header', '.al-quick-btn__quickbtn', '.al-quick-btn__topbtn'];
         hideSelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => 
-                el.style.setProperty('display', 'none', 'important')
-            );
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('display', 'none', 'important'));
         });
 
-        // Reduce opacity of carousel controls
-        const opacitySelectors = [
-            '.cmp-carousel__indicators', 
-            '.cmp-carousel__actions', 
-            '.c-carousel-controls'
-        ];
+        const opacitySelectors = ['.cmp-carousel__indicators', '.cmp-carousel__actions', '.c-carousel-controls'];
         opacitySelectors.forEach(s => {
-            document.querySelectorAll(s).forEach(el => 
-                el.style.setProperty('opacity', '0', 'important')
-            );
+            document.querySelectorAll(s).forEach(el => el.style.setProperty('opacity', '0', 'important'));
         });
 
-        // Pause all videos
+        // Pause videos immediately to prevent motion blur
         document.querySelectorAll('video').forEach(v => v.pause());
     """)
 
@@ -537,7 +444,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
         def block_chat_requests(route):
             url_str = route.request.url.lower()
             chat_keywords = ["genesys", "liveperson", "salesforceliveagent", "adobe-privacy", "chatbot",
-                             "proactive-chat","spinner10-rtl.js","spinner-10-rtl.js","spin-to-win","spintowin","lg-spin",]
+                             "proactive-chat"]
             if any(key in url_str for key in chat_keywords):
                 route.abort()
             else:
@@ -559,29 +466,7 @@ def capture_hero_banners(url, country_code, mode='desktop', log_callback=None, u
                     time.sleep(0.5)
             except:
                 pass
-            try:
-            accept_btn = page.locator("#onetrust-accept-btn-handler")
-            if accept_btn.is_visible(timeout=5000):
-                log("🍪 Accepting cookies...")
-                accept_btn.click()
-                time.sleep(0.5)
-        except:
-            pass
 
-        # 🎯 ADD THIS BLOCK (Pre-emptive spinner blocker)
-        log("🛡️ Installing spinner defenses...")
-        page.evaluate("""
-            // Block spinner before it can initialize (6s boot delay in script)
-            window.__LG_SPIN_SINGLETON__ = true;
-    
-            // Immediate removal if element already exists
-            const existingSpinner = document.getElementById('lg-spin-root');
-            if (existingSpinner) existingSpinner.remove();
-        """)
-        time.sleep(0.3)  # Let the defense settle
-
-        # Continue with existing code...
-page.wait_for_selector("main .cmp-carousel, .main .cmp-carousel, #contents .cmp-carousel", timeout=30000)
             page.wait_for_selector("main .cmp-carousel, .main .cmp-carousel, #contents .cmp-carousel", timeout=30000)
 
             hero_carousel = find_hero_carousel(page, log_callback)
